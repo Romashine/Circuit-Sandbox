@@ -1,0 +1,94 @@
+.shematic-app{
+    position: relative;
+    border: 1px solid grey;
+}
+.shematic-grid {
+    position: absolute;
+}
+.shematic-button-component>div{
+    width: 42px;
+    height: 42px;
+    padding: 1px;
+    border-width: 0px;
+    display: inline-block;
+    cursor: pointer;
+}
+.shematic-button-component>div:hover{
+    border: 1px solid grey;
+    padding: 0px;
+}
+.shematic-menu-left-btn>div{
+    width: 32px;
+    height: 32px;
+    font-size: 10px;
+    text-align: center;
+    padding: 1px;
+    border-width: 0px;
+    cursor: pointer;
+    margin: auto;
+}
+.shematic-menu-left-btn>div:hover{
+    border: 1px solid grey;
+    padding: 0px;
+}
+.shematic-menu-left-btn-LR>div{
+    display: inline-block;
+}
+
+.shematic-top-menu>div{
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 1px;
+    border-width: 0px;
+    display: inline-block;
+    cursor: pointer;
+}
+.shematic-top-menu>div:hover{
+    border: 1px solid grey;
+    padding: 0px;
+}
+.shematic-top-btntran{
+    width: 48px;
+    height: 32px;
+    font-size: 16px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 1px;
+    border-width: 0px;
+    display: inline-block;
+    cursor: pointer;
+}
+.shematic-top-btntran:hover{
+    border: 1px solid grey;
+    padding: 0px;
+}
+
+.shematic-menu-right{
+    vertical-align: top;
+}
+.shematic-menu-left{
+    vertical-align: top;
+    text-align: center;
+}
+
+.shematic-grid{
+    border: 10px;
+    border-color: gray;
+}
+.shematic-table{
+    background-color: rgb(246, 247, 247);
+    border: 1px solid grey;
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently
+                          supported by Chrome and Opera */
+}
