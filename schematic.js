@@ -725,6 +725,16 @@ module.exports = ReactDOMComponentTree;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+
+module.exports = __webpack_require__(19);
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -758,16 +768,6 @@ var ExecutionEnvironment = {
 };
 
 module.exports = ExecutionEnvironment;
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = __webpack_require__(19);
-
 
 /***/ }),
 /* 8 */
@@ -962,389 +962,6 @@ function __makeTemplateObject(cooked, raw) {
 
 /***/ }),
 /* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function(process) {/**
- * Copyright (c) 2016-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * 
- */
-
-
-
-var _prodInvariant = __webpack_require__(22);
-
-var ReactCurrentOwner = __webpack_require__(14);
-
-var invariant = __webpack_require__(1);
-var warning = __webpack_require__(2);
-
-function isNative(fn) {
-  // Based on isNative() from Lodash
-  var funcToString = Function.prototype.toString;
-  var hasOwnProperty = Object.prototype.hasOwnProperty;
-  var reIsNative = RegExp('^' + funcToString
-  // Take an example native function source for comparison
-  .call(hasOwnProperty
-  // Strip regex characters so we can use it for regex
-  ).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&'
-  // Remove hasOwnProperty from the template to make it generic
-  ).replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?') + '$');
-  try {
-    var source = funcToString.call(fn);
-    return reIsNative.test(source);
-  } catch (err) {
-    return false;
-  }
-}
-
-var canUseCollections =
-// Array.from
-typeof Array.from === 'function' &&
-// Map
-typeof Map === 'function' && isNative(Map) &&
-// Map.prototype.keys
-Map.prototype != null && typeof Map.prototype.keys === 'function' && isNative(Map.prototype.keys) &&
-// Set
-typeof Set === 'function' && isNative(Set) &&
-// Set.prototype.keys
-Set.prototype != null && typeof Set.prototype.keys === 'function' && isNative(Set.prototype.keys);
-
-var setItem;
-var getItem;
-var removeItem;
-var getItemIDs;
-var addRoot;
-var removeRoot;
-var getRootIDs;
-
-if (canUseCollections) {
-  var itemMap = new Map();
-  var rootIDSet = new Set();
-
-  setItem = function (id, item) {
-    itemMap.set(id, item);
-  };
-  getItem = function (id) {
-    return itemMap.get(id);
-  };
-  removeItem = function (id) {
-    itemMap['delete'](id);
-  };
-  getItemIDs = function () {
-    return Array.from(itemMap.keys());
-  };
-
-  addRoot = function (id) {
-    rootIDSet.add(id);
-  };
-  removeRoot = function (id) {
-    rootIDSet['delete'](id);
-  };
-  getRootIDs = function () {
-    return Array.from(rootIDSet.keys());
-  };
-} else {
-  var itemByKey = {};
-  var rootByKey = {};
-
-  // Use non-numeric keys to prevent V8 performance issues:
-  // https://github.com/facebook/react/pull/7232
-  var getKeyFromID = function (id) {
-    return '.' + id;
-  };
-  var getIDFromKey = function (key) {
-    return parseInt(key.substr(1), 10);
-  };
-
-  setItem = function (id, item) {
-    var key = getKeyFromID(id);
-    itemByKey[key] = item;
-  };
-  getItem = function (id) {
-    var key = getKeyFromID(id);
-    return itemByKey[key];
-  };
-  removeItem = function (id) {
-    var key = getKeyFromID(id);
-    delete itemByKey[key];
-  };
-  getItemIDs = function () {
-    return Object.keys(itemByKey).map(getIDFromKey);
-  };
-
-  addRoot = function (id) {
-    var key = getKeyFromID(id);
-    rootByKey[key] = true;
-  };
-  removeRoot = function (id) {
-    var key = getKeyFromID(id);
-    delete rootByKey[key];
-  };
-  getRootIDs = function () {
-    return Object.keys(rootByKey).map(getIDFromKey);
-  };
-}
-
-var unmountedIDs = [];
-
-function purgeDeep(id) {
-  var item = getItem(id);
-  if (item) {
-    var childIDs = item.childIDs;
-
-    removeItem(id);
-    childIDs.forEach(purgeDeep);
-  }
-}
-
-function describeComponentFrame(name, source, ownerName) {
-  return '\n    in ' + (name || 'Unknown') + (source ? ' (at ' + source.fileName.replace(/^.*[\\\/]/, '') + ':' + source.lineNumber + ')' : ownerName ? ' (created by ' + ownerName + ')' : '');
-}
-
-function getDisplayName(element) {
-  if (element == null) {
-    return '#empty';
-  } else if (typeof element === 'string' || typeof element === 'number') {
-    return '#text';
-  } else if (typeof element.type === 'string') {
-    return element.type;
-  } else {
-    return element.type.displayName || element.type.name || 'Unknown';
-  }
-}
-
-function describeID(id) {
-  var name = ReactComponentTreeHook.getDisplayName(id);
-  var element = ReactComponentTreeHook.getElement(id);
-  var ownerID = ReactComponentTreeHook.getOwnerID(id);
-  var ownerName;
-  if (ownerID) {
-    ownerName = ReactComponentTreeHook.getDisplayName(ownerID);
-  }
-  process.env.NODE_ENV !== 'production' ? warning(element, 'ReactComponentTreeHook: Missing React element for debugID %s when ' + 'building stack', id) : void 0;
-  return describeComponentFrame(name, element && element._source, ownerName);
-}
-
-var ReactComponentTreeHook = {
-  onSetChildren: function (id, nextChildIDs) {
-    var item = getItem(id);
-    !item ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Item must have been set') : _prodInvariant('144') : void 0;
-    item.childIDs = nextChildIDs;
-
-    for (var i = 0; i < nextChildIDs.length; i++) {
-      var nextChildID = nextChildIDs[i];
-      var nextChild = getItem(nextChildID);
-      !nextChild ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected hook events to fire for the child before its parent includes it in onSetChildren().') : _prodInvariant('140') : void 0;
-      !(nextChild.childIDs != null || typeof nextChild.element !== 'object' || nextChild.element == null) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected onSetChildren() to fire for a container child before its parent includes it in onSetChildren().') : _prodInvariant('141') : void 0;
-      !nextChild.isMounted ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected onMountComponent() to fire for the child before its parent includes it in onSetChildren().') : _prodInvariant('71') : void 0;
-      if (nextChild.parentID == null) {
-        nextChild.parentID = id;
-        // TODO: This shouldn't be necessary but mounting a new root during in
-        // componentWillMount currently causes not-yet-mounted components to
-        // be purged from our tree data so their parent id is missing.
-      }
-      !(nextChild.parentID === id) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected onBeforeMountComponent() parent and onSetChildren() to be consistent (%s has parents %s and %s).', nextChildID, nextChild.parentID, id) : _prodInvariant('142', nextChildID, nextChild.parentID, id) : void 0;
-    }
-  },
-  onBeforeMountComponent: function (id, element, parentID) {
-    var item = {
-      element: element,
-      parentID: parentID,
-      text: null,
-      childIDs: [],
-      isMounted: false,
-      updateCount: 0
-    };
-    setItem(id, item);
-  },
-  onBeforeUpdateComponent: function (id, element) {
-    var item = getItem(id);
-    if (!item || !item.isMounted) {
-      // We may end up here as a result of setState() in componentWillUnmount().
-      // In this case, ignore the element.
-      return;
-    }
-    item.element = element;
-  },
-  onMountComponent: function (id) {
-    var item = getItem(id);
-    !item ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Item must have been set') : _prodInvariant('144') : void 0;
-    item.isMounted = true;
-    var isRoot = item.parentID === 0;
-    if (isRoot) {
-      addRoot(id);
-    }
-  },
-  onUpdateComponent: function (id) {
-    var item = getItem(id);
-    if (!item || !item.isMounted) {
-      // We may end up here as a result of setState() in componentWillUnmount().
-      // In this case, ignore the element.
-      return;
-    }
-    item.updateCount++;
-  },
-  onUnmountComponent: function (id) {
-    var item = getItem(id);
-    if (item) {
-      // We need to check if it exists.
-      // `item` might not exist if it is inside an error boundary, and a sibling
-      // error boundary child threw while mounting. Then this instance never
-      // got a chance to mount, but it still gets an unmounting event during
-      // the error boundary cleanup.
-      item.isMounted = false;
-      var isRoot = item.parentID === 0;
-      if (isRoot) {
-        removeRoot(id);
-      }
-    }
-    unmountedIDs.push(id);
-  },
-  purgeUnmountedComponents: function () {
-    if (ReactComponentTreeHook._preventPurging) {
-      // Should only be used for testing.
-      return;
-    }
-
-    for (var i = 0; i < unmountedIDs.length; i++) {
-      var id = unmountedIDs[i];
-      purgeDeep(id);
-    }
-    unmountedIDs.length = 0;
-  },
-  isMounted: function (id) {
-    var item = getItem(id);
-    return item ? item.isMounted : false;
-  },
-  getCurrentStackAddendum: function (topElement) {
-    var info = '';
-    if (topElement) {
-      var name = getDisplayName(topElement);
-      var owner = topElement._owner;
-      info += describeComponentFrame(name, topElement._source, owner && owner.getName());
-    }
-
-    var currentOwner = ReactCurrentOwner.current;
-    var id = currentOwner && currentOwner._debugID;
-
-    info += ReactComponentTreeHook.getStackAddendumByID(id);
-    return info;
-  },
-  getStackAddendumByID: function (id) {
-    var info = '';
-    while (id) {
-      info += describeID(id);
-      id = ReactComponentTreeHook.getParentID(id);
-    }
-    return info;
-  },
-  getChildIDs: function (id) {
-    var item = getItem(id);
-    return item ? item.childIDs : [];
-  },
-  getDisplayName: function (id) {
-    var element = ReactComponentTreeHook.getElement(id);
-    if (!element) {
-      return null;
-    }
-    return getDisplayName(element);
-  },
-  getElement: function (id) {
-    var item = getItem(id);
-    return item ? item.element : null;
-  },
-  getOwnerID: function (id) {
-    var element = ReactComponentTreeHook.getElement(id);
-    if (!element || !element._owner) {
-      return null;
-    }
-    return element._owner._debugID;
-  },
-  getParentID: function (id) {
-    var item = getItem(id);
-    return item ? item.parentID : null;
-  },
-  getSource: function (id) {
-    var item = getItem(id);
-    var element = item ? item.element : null;
-    var source = element != null ? element._source : null;
-    return source;
-  },
-  getText: function (id) {
-    var element = ReactComponentTreeHook.getElement(id);
-    if (typeof element === 'string') {
-      return element;
-    } else if (typeof element === 'number') {
-      return '' + element;
-    } else {
-      return null;
-    }
-  },
-  getUpdateCount: function (id) {
-    var item = getItem(id);
-    return item ? item.updateCount : 0;
-  },
-
-
-  getRootIDs: getRootIDs,
-  getRegisteredIDs: getItemIDs,
-
-  pushNonStandardWarningStack: function (isCreatingElement, currentSource) {
-    if (typeof console.reactStack !== 'function') {
-      return;
-    }
-
-    var stack = [];
-    var currentOwner = ReactCurrentOwner.current;
-    var id = currentOwner && currentOwner._debugID;
-
-    try {
-      if (isCreatingElement) {
-        stack.push({
-          name: id ? ReactComponentTreeHook.getDisplayName(id) : null,
-          fileName: currentSource ? currentSource.fileName : null,
-          lineNumber: currentSource ? currentSource.lineNumber : null
-        });
-      }
-
-      while (id) {
-        var element = ReactComponentTreeHook.getElement(id);
-        var parentID = ReactComponentTreeHook.getParentID(id);
-        var ownerID = ReactComponentTreeHook.getOwnerID(id);
-        var ownerName = ownerID ? ReactComponentTreeHook.getDisplayName(ownerID) : null;
-        var source = element && element._source;
-        stack.push({
-          name: ownerName,
-          fileName: source ? source.fileName : null,
-          lineNumber: source ? source.lineNumber : null
-        });
-        id = parentID;
-      }
-    } catch (err) {
-      // Internal state is messed up.
-      // Stop building the stack (it's just a nice to have).
-    }
-
-    console.reactStack(stack);
-  },
-  popNonStandardWarningStack: function () {
-    if (typeof console.reactStackEnd !== 'function') {
-      return;
-    }
-    console.reactStackEnd();
-  }
-};
-
-module.exports = ReactComponentTreeHook;
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
-
-/***/ }),
-/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Adapted from ReactART:
@@ -1737,6 +1354,389 @@ shapes.forEach(function(shapeName) {
 
 module.exports = ReactKonva;
 
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(process) {/**
+ * Copyright (c) 2016-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * 
+ */
+
+
+
+var _prodInvariant = __webpack_require__(22);
+
+var ReactCurrentOwner = __webpack_require__(14);
+
+var invariant = __webpack_require__(1);
+var warning = __webpack_require__(2);
+
+function isNative(fn) {
+  // Based on isNative() from Lodash
+  var funcToString = Function.prototype.toString;
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
+  var reIsNative = RegExp('^' + funcToString
+  // Take an example native function source for comparison
+  .call(hasOwnProperty
+  // Strip regex characters so we can use it for regex
+  ).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&'
+  // Remove hasOwnProperty from the template to make it generic
+  ).replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?') + '$');
+  try {
+    var source = funcToString.call(fn);
+    return reIsNative.test(source);
+  } catch (err) {
+    return false;
+  }
+}
+
+var canUseCollections =
+// Array.from
+typeof Array.from === 'function' &&
+// Map
+typeof Map === 'function' && isNative(Map) &&
+// Map.prototype.keys
+Map.prototype != null && typeof Map.prototype.keys === 'function' && isNative(Map.prototype.keys) &&
+// Set
+typeof Set === 'function' && isNative(Set) &&
+// Set.prototype.keys
+Set.prototype != null && typeof Set.prototype.keys === 'function' && isNative(Set.prototype.keys);
+
+var setItem;
+var getItem;
+var removeItem;
+var getItemIDs;
+var addRoot;
+var removeRoot;
+var getRootIDs;
+
+if (canUseCollections) {
+  var itemMap = new Map();
+  var rootIDSet = new Set();
+
+  setItem = function (id, item) {
+    itemMap.set(id, item);
+  };
+  getItem = function (id) {
+    return itemMap.get(id);
+  };
+  removeItem = function (id) {
+    itemMap['delete'](id);
+  };
+  getItemIDs = function () {
+    return Array.from(itemMap.keys());
+  };
+
+  addRoot = function (id) {
+    rootIDSet.add(id);
+  };
+  removeRoot = function (id) {
+    rootIDSet['delete'](id);
+  };
+  getRootIDs = function () {
+    return Array.from(rootIDSet.keys());
+  };
+} else {
+  var itemByKey = {};
+  var rootByKey = {};
+
+  // Use non-numeric keys to prevent V8 performance issues:
+  // https://github.com/facebook/react/pull/7232
+  var getKeyFromID = function (id) {
+    return '.' + id;
+  };
+  var getIDFromKey = function (key) {
+    return parseInt(key.substr(1), 10);
+  };
+
+  setItem = function (id, item) {
+    var key = getKeyFromID(id);
+    itemByKey[key] = item;
+  };
+  getItem = function (id) {
+    var key = getKeyFromID(id);
+    return itemByKey[key];
+  };
+  removeItem = function (id) {
+    var key = getKeyFromID(id);
+    delete itemByKey[key];
+  };
+  getItemIDs = function () {
+    return Object.keys(itemByKey).map(getIDFromKey);
+  };
+
+  addRoot = function (id) {
+    var key = getKeyFromID(id);
+    rootByKey[key] = true;
+  };
+  removeRoot = function (id) {
+    var key = getKeyFromID(id);
+    delete rootByKey[key];
+  };
+  getRootIDs = function () {
+    return Object.keys(rootByKey).map(getIDFromKey);
+  };
+}
+
+var unmountedIDs = [];
+
+function purgeDeep(id) {
+  var item = getItem(id);
+  if (item) {
+    var childIDs = item.childIDs;
+
+    removeItem(id);
+    childIDs.forEach(purgeDeep);
+  }
+}
+
+function describeComponentFrame(name, source, ownerName) {
+  return '\n    in ' + (name || 'Unknown') + (source ? ' (at ' + source.fileName.replace(/^.*[\\\/]/, '') + ':' + source.lineNumber + ')' : ownerName ? ' (created by ' + ownerName + ')' : '');
+}
+
+function getDisplayName(element) {
+  if (element == null) {
+    return '#empty';
+  } else if (typeof element === 'string' || typeof element === 'number') {
+    return '#text';
+  } else if (typeof element.type === 'string') {
+    return element.type;
+  } else {
+    return element.type.displayName || element.type.name || 'Unknown';
+  }
+}
+
+function describeID(id) {
+  var name = ReactComponentTreeHook.getDisplayName(id);
+  var element = ReactComponentTreeHook.getElement(id);
+  var ownerID = ReactComponentTreeHook.getOwnerID(id);
+  var ownerName;
+  if (ownerID) {
+    ownerName = ReactComponentTreeHook.getDisplayName(ownerID);
+  }
+  process.env.NODE_ENV !== 'production' ? warning(element, 'ReactComponentTreeHook: Missing React element for debugID %s when ' + 'building stack', id) : void 0;
+  return describeComponentFrame(name, element && element._source, ownerName);
+}
+
+var ReactComponentTreeHook = {
+  onSetChildren: function (id, nextChildIDs) {
+    var item = getItem(id);
+    !item ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Item must have been set') : _prodInvariant('144') : void 0;
+    item.childIDs = nextChildIDs;
+
+    for (var i = 0; i < nextChildIDs.length; i++) {
+      var nextChildID = nextChildIDs[i];
+      var nextChild = getItem(nextChildID);
+      !nextChild ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected hook events to fire for the child before its parent includes it in onSetChildren().') : _prodInvariant('140') : void 0;
+      !(nextChild.childIDs != null || typeof nextChild.element !== 'object' || nextChild.element == null) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected onSetChildren() to fire for a container child before its parent includes it in onSetChildren().') : _prodInvariant('141') : void 0;
+      !nextChild.isMounted ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected onMountComponent() to fire for the child before its parent includes it in onSetChildren().') : _prodInvariant('71') : void 0;
+      if (nextChild.parentID == null) {
+        nextChild.parentID = id;
+        // TODO: This shouldn't be necessary but mounting a new root during in
+        // componentWillMount currently causes not-yet-mounted components to
+        // be purged from our tree data so their parent id is missing.
+      }
+      !(nextChild.parentID === id) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Expected onBeforeMountComponent() parent and onSetChildren() to be consistent (%s has parents %s and %s).', nextChildID, nextChild.parentID, id) : _prodInvariant('142', nextChildID, nextChild.parentID, id) : void 0;
+    }
+  },
+  onBeforeMountComponent: function (id, element, parentID) {
+    var item = {
+      element: element,
+      parentID: parentID,
+      text: null,
+      childIDs: [],
+      isMounted: false,
+      updateCount: 0
+    };
+    setItem(id, item);
+  },
+  onBeforeUpdateComponent: function (id, element) {
+    var item = getItem(id);
+    if (!item || !item.isMounted) {
+      // We may end up here as a result of setState() in componentWillUnmount().
+      // In this case, ignore the element.
+      return;
+    }
+    item.element = element;
+  },
+  onMountComponent: function (id) {
+    var item = getItem(id);
+    !item ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Item must have been set') : _prodInvariant('144') : void 0;
+    item.isMounted = true;
+    var isRoot = item.parentID === 0;
+    if (isRoot) {
+      addRoot(id);
+    }
+  },
+  onUpdateComponent: function (id) {
+    var item = getItem(id);
+    if (!item || !item.isMounted) {
+      // We may end up here as a result of setState() in componentWillUnmount().
+      // In this case, ignore the element.
+      return;
+    }
+    item.updateCount++;
+  },
+  onUnmountComponent: function (id) {
+    var item = getItem(id);
+    if (item) {
+      // We need to check if it exists.
+      // `item` might not exist if it is inside an error boundary, and a sibling
+      // error boundary child threw while mounting. Then this instance never
+      // got a chance to mount, but it still gets an unmounting event during
+      // the error boundary cleanup.
+      item.isMounted = false;
+      var isRoot = item.parentID === 0;
+      if (isRoot) {
+        removeRoot(id);
+      }
+    }
+    unmountedIDs.push(id);
+  },
+  purgeUnmountedComponents: function () {
+    if (ReactComponentTreeHook._preventPurging) {
+      // Should only be used for testing.
+      return;
+    }
+
+    for (var i = 0; i < unmountedIDs.length; i++) {
+      var id = unmountedIDs[i];
+      purgeDeep(id);
+    }
+    unmountedIDs.length = 0;
+  },
+  isMounted: function (id) {
+    var item = getItem(id);
+    return item ? item.isMounted : false;
+  },
+  getCurrentStackAddendum: function (topElement) {
+    var info = '';
+    if (topElement) {
+      var name = getDisplayName(topElement);
+      var owner = topElement._owner;
+      info += describeComponentFrame(name, topElement._source, owner && owner.getName());
+    }
+
+    var currentOwner = ReactCurrentOwner.current;
+    var id = currentOwner && currentOwner._debugID;
+
+    info += ReactComponentTreeHook.getStackAddendumByID(id);
+    return info;
+  },
+  getStackAddendumByID: function (id) {
+    var info = '';
+    while (id) {
+      info += describeID(id);
+      id = ReactComponentTreeHook.getParentID(id);
+    }
+    return info;
+  },
+  getChildIDs: function (id) {
+    var item = getItem(id);
+    return item ? item.childIDs : [];
+  },
+  getDisplayName: function (id) {
+    var element = ReactComponentTreeHook.getElement(id);
+    if (!element) {
+      return null;
+    }
+    return getDisplayName(element);
+  },
+  getElement: function (id) {
+    var item = getItem(id);
+    return item ? item.element : null;
+  },
+  getOwnerID: function (id) {
+    var element = ReactComponentTreeHook.getElement(id);
+    if (!element || !element._owner) {
+      return null;
+    }
+    return element._owner._debugID;
+  },
+  getParentID: function (id) {
+    var item = getItem(id);
+    return item ? item.parentID : null;
+  },
+  getSource: function (id) {
+    var item = getItem(id);
+    var element = item ? item.element : null;
+    var source = element != null ? element._source : null;
+    return source;
+  },
+  getText: function (id) {
+    var element = ReactComponentTreeHook.getElement(id);
+    if (typeof element === 'string') {
+      return element;
+    } else if (typeof element === 'number') {
+      return '' + element;
+    } else {
+      return null;
+    }
+  },
+  getUpdateCount: function (id) {
+    var item = getItem(id);
+    return item ? item.updateCount : 0;
+  },
+
+
+  getRootIDs: getRootIDs,
+  getRegisteredIDs: getItemIDs,
+
+  pushNonStandardWarningStack: function (isCreatingElement, currentSource) {
+    if (typeof console.reactStack !== 'function') {
+      return;
+    }
+
+    var stack = [];
+    var currentOwner = ReactCurrentOwner.current;
+    var id = currentOwner && currentOwner._debugID;
+
+    try {
+      if (isCreatingElement) {
+        stack.push({
+          name: id ? ReactComponentTreeHook.getDisplayName(id) : null,
+          fileName: currentSource ? currentSource.fileName : null,
+          lineNumber: currentSource ? currentSource.lineNumber : null
+        });
+      }
+
+      while (id) {
+        var element = ReactComponentTreeHook.getElement(id);
+        var parentID = ReactComponentTreeHook.getParentID(id);
+        var ownerID = ReactComponentTreeHook.getOwnerID(id);
+        var ownerName = ownerID ? ReactComponentTreeHook.getDisplayName(ownerID) : null;
+        var source = element && element._source;
+        stack.push({
+          name: ownerName,
+          fileName: source ? source.fileName : null,
+          lineNumber: source ? source.lineNumber : null
+        });
+        id = parentID;
+      }
+    } catch (err) {
+      // Internal state is messed up.
+      // Stop building the stack (it's just a nice to have).
+    }
+
+    console.reactStack(stack);
+  },
+  popNonStandardWarningStack: function () {
+    if (typeof console.reactStackEnd !== 'function') {
+      return;
+    }
+    console.reactStackEnd();
+  }
+};
+
+module.exports = ReactComponentTreeHook;
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
 /* 11 */
@@ -2415,8 +2415,8 @@ function getPooledWarningPropertyDefinition(propName, getVal) {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var ConnectionPoint = /** @class */ (function (_super) {
     tslib_1.__extends(ConnectionPoint, _super);
@@ -4737,7 +4737,7 @@ module.exports = SyntheticMouseEvent;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var DOMNamespaces = __webpack_require__(46);
 
 var WHITESPACE_TEST = /^[ \r\n\t\f]/;
@@ -5750,7 +5750,7 @@ module.exports = getEventTarget;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var useHasFeature;
 if (ExecutionEnvironment.canUseDOM) {
@@ -7502,7 +7502,7 @@ module.exports = getIteratorFn;
 
 
 var ReactCurrentOwner = __webpack_require__(14);
-var ReactComponentTreeHook = __webpack_require__(9);
+var ReactComponentTreeHook = __webpack_require__(10);
 var ReactElement = __webpack_require__(20);
 
 var checkReactTypeSpec = __webpack_require__(96);
@@ -9324,7 +9324,7 @@ module.exports = forEachAccumulated;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var contentKey = null;
 
@@ -9716,7 +9716,7 @@ module.exports = ViewportMetrics;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var escapeTextContentForBrowser = __webpack_require__(35);
 var setInnerHTML = __webpack_require__(34);
 
@@ -12150,7 +12150,7 @@ module.exports = getHostComponentFromComposite;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var ReactDOM = __webpack_require__(104);
 var app_1 = __webpack_require__(189);
 ReactDOM.render(React.createElement(app_1.App, null), document.getElementById("sandbox"));
@@ -12912,7 +12912,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(9);
+  ReactComponentTreeHook = __webpack_require__(10);
 }
 
 var loggedTypeFailures = {};
@@ -12954,7 +12954,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         if (process.env.NODE_ENV !== 'production') {
           if (!ReactComponentTreeHook) {
-            ReactComponentTreeHook = __webpack_require__(9);
+            ReactComponentTreeHook = __webpack_require__(10);
           }
           if (debugID !== null) {
             componentStackInfo = ReactComponentTreeHook.getStackAddendumByID(debugID);
@@ -13272,7 +13272,7 @@ if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined' && typeof __REACT_DEVT
 }
 
 if (process.env.NODE_ENV !== 'production') {
-  var ExecutionEnvironment = __webpack_require__(6);
+  var ExecutionEnvironment = __webpack_require__(7);
   if (ExecutionEnvironment.canUseDOM && window.top === window.self) {
     // First check if devtools is not installed
     if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === 'undefined') {
@@ -13502,7 +13502,7 @@ module.exports = ARIADOMPropertyConfig;
 
 
 var EventPropagators = __webpack_require__(27);
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var FallbackCompositionState = __webpack_require__(109);
 var SyntheticCompositionEvent = __webpack_require__(110);
 var SyntheticInputEvent = __webpack_require__(111);
@@ -14067,7 +14067,7 @@ module.exports = SyntheticInputEvent;
 
 var EventPluginHub = __webpack_require__(28);
 var EventPropagators = __webpack_require__(27);
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var ReactDOMComponentTree = __webpack_require__(5);
 var ReactUpdates = __webpack_require__(13);
 var SyntheticEvent = __webpack_require__(16);
@@ -14572,8 +14572,8 @@ module.exports = ReactOwner;
 
 var ReactInvalidSetStateWarningHook = __webpack_require__(116);
 var ReactHostOperationHistoryHook = __webpack_require__(117);
-var ReactComponentTreeHook = __webpack_require__(9);
-var ExecutionEnvironment = __webpack_require__(6);
+var ReactComponentTreeHook = __webpack_require__(10);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var performanceNow = __webpack_require__(118);
 var warning = __webpack_require__(2);
@@ -15050,7 +15050,7 @@ module.exports = performanceNow;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var performance;
 
@@ -15479,7 +15479,7 @@ module.exports = ReactComponentBrowserEnvironment;
 var _prodInvariant = __webpack_require__(3);
 
 var DOMLazyTree = __webpack_require__(24);
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var createNodesFromMarkup = __webpack_require__(125);
 var emptyFunction = __webpack_require__(11);
@@ -15529,7 +15529,7 @@ module.exports = Danger;
 
 /*eslint-disable fb-www/unsafe-html*/
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var createArrayFromMixed = __webpack_require__(126);
 var getMarkupWrap = __webpack_require__(127);
@@ -15747,7 +15747,7 @@ module.exports = createArrayFromMixed;
 
 /*eslint-disable fb-www/unsafe-html */
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var invariant = __webpack_require__(1);
 
@@ -16926,7 +16926,7 @@ module.exports = AutoFocusUtils;
 
 
 var CSSProperty = __webpack_require__(75);
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var ReactInstrumentation = __webpack_require__(12);
 
 var camelizeStyleName = __webpack_require__(132);
@@ -17480,7 +17480,7 @@ module.exports = ReactEventEmitterMixin;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 /**
  * Generate a mapping of standard vendor prefixes using the defined style property and event name.
@@ -18181,7 +18181,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(9);
+  ReactComponentTreeHook = __webpack_require__(10);
 }
 
 function instantiateChild(childInstances, child, name, selfDebugID) {
@@ -18189,7 +18189,7 @@ function instantiateChild(childInstances, child, name, selfDebugID) {
   var keyUnique = childInstances[name] === undefined;
   if (process.env.NODE_ENV !== 'production') {
     if (!ReactComponentTreeHook) {
-      ReactComponentTreeHook = __webpack_require__(9);
+      ReactComponentTreeHook = __webpack_require__(10);
     }
     if (!keyUnique) {
       process.env.NODE_ENV !== 'production' ? warning(false, 'flattenChildren(...): Encountered two children with the same key, ' + '`%s`. Child keys must be unique; when two children share a key, only ' + 'the first child will be used.%s', KeyEscapeUtils.unescape(name), ReactComponentTreeHook.getStackAddendumByID(selfDebugID)) : void 0;
@@ -19242,7 +19242,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(9);
+  ReactComponentTreeHook = __webpack_require__(10);
 }
 
 var loggedTypeFailures = {};
@@ -19284,7 +19284,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         if (process.env.NODE_ENV !== 'production') {
           if (!ReactComponentTreeHook) {
-            ReactComponentTreeHook = __webpack_require__(9);
+            ReactComponentTreeHook = __webpack_require__(10);
           }
           if (debugID !== null) {
             componentStackInfo = ReactComponentTreeHook.getStackAddendumByID(debugID);
@@ -19450,7 +19450,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(9);
+  ReactComponentTreeHook = __webpack_require__(10);
 }
 
 /**
@@ -19466,7 +19466,7 @@ function flattenSingleChildIntoContext(traverseContext, child, name, selfDebugID
     var keyUnique = result[name] === undefined;
     if (process.env.NODE_ENV !== 'production') {
       if (!ReactComponentTreeHook) {
-        ReactComponentTreeHook = __webpack_require__(9);
+        ReactComponentTreeHook = __webpack_require__(10);
       }
       if (!keyUnique) {
         process.env.NODE_ENV !== 'production' ? warning(false, 'flattenChildren(...): Encountered two children with the same key, ' + '`%s`. Child keys must be unique; when two children share a key, only ' + 'the first child will be used.%s', KeyEscapeUtils.unescape(name), ReactComponentTreeHook.getStackAddendumByID(selfDebugID)) : void 0;
@@ -20197,7 +20197,7 @@ module.exports = ReactDefaultBatchingStrategy;
 var _assign = __webpack_require__(4);
 
 var EventListener = __webpack_require__(85);
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var PooledClass = __webpack_require__(21);
 var ReactDOMComponentTree = __webpack_require__(5);
 var ReactUpdates = __webpack_require__(13);
@@ -20613,7 +20613,7 @@ module.exports = ReactReconcileTransaction;
 
 
 
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 
 var getNodeForCharacterOffset = __webpack_require__(163);
 var getTextContentAccessor = __webpack_require__(67);
@@ -21310,7 +21310,7 @@ module.exports = SVGDOMPropertyConfig;
 
 
 var EventPropagators = __webpack_require__(27);
-var ExecutionEnvironment = __webpack_require__(6);
+var ExecutionEnvironment = __webpack_require__(7);
 var ReactDOMComponentTree = __webpack_require__(5);
 var ReactInputSelection = __webpack_require__(86);
 var SyntheticEvent = __webpack_require__(16);
@@ -22498,7 +22498,7 @@ module.exports = ReactMount.renderSubtreeIntoContainer;
 
 var DOMProperty = __webpack_require__(18);
 var EventPluginRegistry = __webpack_require__(31);
-var ReactComponentTreeHook = __webpack_require__(9);
+var ReactComponentTreeHook = __webpack_require__(10);
 
 var warning = __webpack_require__(2);
 
@@ -22612,7 +22612,7 @@ module.exports = ReactDOMUnknownPropertyHook;
 
 
 
-var ReactComponentTreeHook = __webpack_require__(9);
+var ReactComponentTreeHook = __webpack_require__(10);
 
 var warning = __webpack_require__(2);
 
@@ -22660,7 +22660,7 @@ module.exports = ReactDOMNullInputValuePropHook;
 
 
 var DOMProperty = __webpack_require__(18);
-var ReactComponentTreeHook = __webpack_require__(9);
+var ReactComponentTreeHook = __webpack_require__(10);
 
 var warning = __webpack_require__(2);
 
@@ -22749,8 +22749,8 @@ module.exports = ReactDOMInvalidARIAHook;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var grid_1 = __webpack_require__(195);
 var icon_1 = __webpack_require__(196);
 var const_1 = __webpack_require__(37);
@@ -22765,6 +22765,7 @@ var opamp_1 = __webpack_require__(204);
 var pfet_1 = __webpack_require__(205);
 var probe_1 = __webpack_require__(206);
 var resistor_1 = __webpack_require__(207);
+var select_1 = __webpack_require__(208);
 var App = /** @class */ (function (_super) {
     tslib_1.__extends(App, _super);
     function App(props) {
@@ -22833,9 +22834,14 @@ var App = /** @class */ (function (_super) {
                                 React.createElement("div", { onClick: this.onDeleteElement.bind(this) },
                                     React.createElement(icon_1.Icon, { name: "delete_forever" })))),
                         React.createElement("td", null,
-                            React.createElement("div", { className: "shematic-app", onMouseMove: this.onMouseMove.bind(this), onMouseDown: this.onMouseDown.bind(this), style: { position: "relative" } },
+                            React.createElement("div", { className: "shematic-app", onMouseMove: this.onMouseMove.bind(this), onMouseDown: this.onMouseDown.bind(this), onMouseUp: this.onMouseUp.bind(this), style: { position: "relative" } },
                                 React.createElement(grid_1.Grid, { width: 800, height: 456, scale: this.state.scale, stroke: this.state.stroke }),
-                                React.createElement(react_konva_1.Stage, { width: 800, height: 456 }, this.renderElements()))),
+                                React.createElement(react_konva_1.Stage, { width: 800, height: 456 },
+                                    this.renderElements(),
+                                    this.state.selectRect ?
+                                        React.createElement(select_1.Select, { x: this.state.selectRect.x, y: this.state.selectRect.y, width: this.state.selectRect.width, height: this.state.selectRect.height })
+                                        :
+                                            null))),
                         React.createElement("td", { className: "shematic-menu-right" },
                             React.createElement("div", { className: "shematic-button-component" },
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: opamp_1.OpAmp, app: this, scale: 0.8, x: 0, y: 18, comment: "OpAmp", name: "opamp" }),
@@ -22861,6 +22867,7 @@ var App = /** @class */ (function (_super) {
     App.prototype.renderElements = function () {
         var _this = this;
         return this.state.elements.map(function (element, index) {
+            // let ElClass: React.ComponentClass<any>&IBundlable;
             var ElClass;
             switch (element.type) {
                 case "opamp":
@@ -22890,14 +22897,61 @@ var App = /** @class */ (function (_super) {
                 case "inductor":
                     ElClass = inductor_1.Inductor;
                     break;
+                case "select":
+                    ElClass = select_1.Select;
+                    break;
                 default:
                     throw new Error("undestend type");
             }
-            return (React.createElement(ElClass, { key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onClick: _this.onElementClick.bind(_this, element) }));
+            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onClick: _this.onElementClick.bind(_this, element) }));
+            return elclass;
         });
     };
     App.prototype.onMouseDown = function (e) {
         this.unselectAll();
+        var x = this.state.selectRect ? this.state.selectRect.x : e.nativeEvent.offsetX;
+        var y = this.state.selectRect ? this.state.selectRect.y : e.nativeEvent.offsetY;
+        this.setState({
+            selectRect: {
+                x: x,
+                y: y,
+                width: e.nativeEvent.offsetX - x,
+                height: e.nativeEvent.offsetY - y,
+            },
+        });
+    };
+    App.prototype.onMouseUp = function () {
+        if (this.state.selectRect) {
+            var _a = this.state, selectRect = _a.selectRect, scale = _a.scale;
+            var y_1 = selectRect.y / scale;
+            var yh_1 = (selectRect.y + selectRect.height) / scale;
+            if (y_1 > yh_1) {
+                var temp = y_1;
+                y_1 = yh_1;
+                yh_1 = temp;
+            }
+            var x_1 = selectRect.x / scale;
+            var xw_1 = (selectRect.x + selectRect.width) / scale;
+            if (x_1 > xw_1) {
+                var temp = x_1;
+                x_1 = xw_1;
+                xw_1 = temp;
+            }
+            this.state.elements.forEach(function (element) {
+                var bundle = element.component.bundle;
+                var yb = bundle.y;
+                var yhb = bundle.y + bundle.height;
+                var xb = bundle.x;
+                var xwb = bundle.x + bundle.width;
+                if (((y_1 <= yb && yb <= yh_1) ||
+                    (y_1 <= yhb && yhb <= yh_1)) &&
+                    ((x_1 <= xb && xb <= xw_1) ||
+                        (x_1 <= xwb && xwb <= xw_1))) {
+                    element.selected = true;
+                }
+            });
+            this.setState({ selectRect: undefined });
+        }
     };
     App.prototype.showComment = function (text) {
         this.setState({ commentDown: text });
@@ -22919,6 +22973,18 @@ var App = /** @class */ (function (_super) {
                     }
                 });
                 this.setState({});
+            }
+            else {
+                var x = this.state.selectRect ? this.state.selectRect.x : e.nativeEvent.offsetX;
+                var y = this.state.selectRect ? this.state.selectRect.y : e.nativeEvent.offsetY;
+                this.setState({
+                    selectRect: {
+                        x: x,
+                        y: y,
+                        width: e.nativeEvent.offsetX - x,
+                        height: e.nativeEvent.offsetY - y,
+                    },
+                });
             }
         }
     };
@@ -22993,10 +23059,23 @@ var App = /** @class */ (function (_super) {
     };
     App.prototype.onDeleteElement = function (element) {
         var _this = this;
-        this.state.elements.forEach(function (element) {
+        var indexes = [];
+        this.state.elements.forEach(function (element, index) {
             if (element.selected) {
-                ArrayRemove(_this.state.elements, _this.state.elements.indexOf(element));
+                indexes.push(index);
             }
+        });
+        indexes.sort(function (a, b) {
+            if (a < b) {
+                return 1;
+            }
+            if (a > b) {
+                return -1;
+            }
+            return 0;
+        });
+        indexes.forEach(function (index) {
+            ArrayRemove(_this.state.elements, index);
         });
         this.setState({});
     };
@@ -41376,7 +41455,7 @@ module.exports = function() {
 
 
 
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var factory = __webpack_require__(63);
 
 if (typeof React === 'undefined') {
@@ -41404,8 +41483,8 @@ module.exports = factory(
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var const_1 = __webpack_require__(37);
 var Grid = /** @class */ (function (_super) {
     tslib_1.__extends(Grid, _super);
@@ -41446,7 +41525,7 @@ exports.Grid = Grid;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var Icon = /** @class */ (function (_super) {
     tslib_1.__extends(Icon, _super);
     function Icon(props) {
@@ -41487,8 +41566,8 @@ exports.Element = Element;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var const_1 = __webpack_require__(37);
 var ButtonComponent = /** @class */ (function (_super) {
     tslib_1.__extends(ButtonComponent, _super);
@@ -41515,8 +41594,8 @@ exports.ButtonComponent = ButtonComponent;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var Capacitor = /** @class */ (function (_super) {
@@ -41527,6 +41606,7 @@ var Capacitor = /** @class */ (function (_super) {
         return _this;
     }
     Capacitor.prototype.render = function () {
+        this.bundle = { x: this.props.x - 8, y: this.props.y, width: 16, height: 48 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41552,8 +41632,8 @@ exports.Capacitor = Capacitor;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var Diode = /** @class */ (function (_super) {
@@ -41564,6 +41644,7 @@ var Diode = /** @class */ (function (_super) {
         return _this;
     }
     Diode.prototype.render = function () {
+        this.bundle = { x: this.props.x - 10, y: this.props.y, width: 30, height: 48 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41591,8 +41672,8 @@ exports.Diode = Diode;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var Ground = /** @class */ (function (_super) {
@@ -41603,6 +41684,7 @@ var Ground = /** @class */ (function (_super) {
         return _this;
     }
     Ground.prototype.render = function () {
+        this.bundle = { x: this.props.x - 6, y: this.props.y, width: 12, height: 14 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41627,8 +41709,8 @@ exports.Ground = Ground;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var Inductor = /** @class */ (function (_super) {
@@ -41644,6 +41726,7 @@ var Inductor = /** @class */ (function (_super) {
         };
     };
     Inductor.prototype.render = function () {
+        this.bundle = { x: this.props.x - 5, y: this.props.y, width: 9, height: 48 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41678,8 +41761,8 @@ exports.Inductor = Inductor;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var NFet = /** @class */ (function (_super) {
@@ -41690,6 +41773,7 @@ var NFet = /** @class */ (function (_super) {
         return _this;
     }
     NFet.prototype.render = function () {
+        this.bundle = { x: this.props.x - 24, y: this.props.y, width: 24, height: 32 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41719,8 +41803,8 @@ exports.NFet = NFet;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var OpAmp = /** @class */ (function (_super) {
@@ -41731,6 +41815,7 @@ var OpAmp = /** @class */ (function (_super) {
         return _this;
     }
     OpAmp.prototype.render = function () {
+        this.bundle = { x: this.props.x, y: this.props.y - 8, width: 40, height: 32 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41763,8 +41848,8 @@ exports.OpAmp = OpAmp;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var PFet = /** @class */ (function (_super) {
@@ -41780,6 +41865,7 @@ var PFet = /** @class */ (function (_super) {
         };
     };
     PFet.prototype.render = function () {
+        this.bundle = { x: this.props.x - 24, y: this.props.y, width: 24, height: 32 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41817,8 +41903,8 @@ exports.PFet = PFet;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var Probe = /** @class */ (function (_super) {
@@ -41829,6 +41915,7 @@ var Probe = /** @class */ (function (_super) {
         return _this;
     }
     Probe.prototype.render = function () {
+        this.bundle = { x: this.props.x, y: this.props.y - 21, width: 21, height: 21 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41855,8 +41942,8 @@ exports.Probe = Probe;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(10);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
 var helper_1 = __webpack_require__(15);
 var connection_point_1 = __webpack_require__(17);
 var Resistor = /** @class */ (function (_super) {
@@ -41872,6 +41959,7 @@ var Resistor = /** @class */ (function (_super) {
         };
     };
     Resistor.prototype.render = function () {
+        this.bundle = { x: this.props.x - 5, y: this.props.y, width: 10, height: 48 };
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
@@ -41900,6 +41988,32 @@ var Resistor = /** @class */ (function (_super) {
     return Resistor;
 }(React.Component));
 exports.Resistor = Resistor;
+
+
+/***/ }),
+/* 208 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(8);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
+var Select = /** @class */ (function (_super) {
+    tslib_1.__extends(Select, _super);
+    function Select(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {};
+        return _this;
+    }
+    Select.prototype.render = function () {
+        return (React.createElement(react_konva_1.Layer, { x: this.props.x, y: this.props.y },
+            React.createElement(react_konva_1.Rect, { x: 0, y: 0, width: this.props.width, height: this.props.height, stroke: "blue", strokeWidth: 2 })));
+    };
+    return Select;
+}(React.Component));
+exports.Select = Select;
 
 
 /***/ })
