@@ -22986,7 +22986,7 @@ var App = /** @class */ (function (_super) {
                 default:
                     throw new Error("undestend type");
             }
-            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this), startX: element.startX, startY: element.startY, endX: element.endX, endY: element.endY }));
+            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY }));
             return elclass;
         });
     };
