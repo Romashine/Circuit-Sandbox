@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 91);
+/******/ 	return __webpack_require__(__webpack_require__.s = 96);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -426,351 +426,6 @@ module.exports = reactProdInvariant;
 
 /***/ }),
 /* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/*
-object-assign
-(c) Sindre Sorhus
-@license MIT
-*/
-
-
-/* eslint-disable no-unused-vars */
-var getOwnPropertySymbols = Object.getOwnPropertySymbols;
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-var propIsEnumerable = Object.prototype.propertyIsEnumerable;
-
-function toObject(val) {
-	if (val === null || val === undefined) {
-		throw new TypeError('Object.assign cannot be called with null or undefined');
-	}
-
-	return Object(val);
-}
-
-function shouldUseNative() {
-	try {
-		if (!Object.assign) {
-			return false;
-		}
-
-		// Detect buggy property enumeration order in older V8 versions.
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
-		var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
-		test1[5] = 'de';
-		if (Object.getOwnPropertyNames(test1)[0] === '5') {
-			return false;
-		}
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
-		var test2 = {};
-		for (var i = 0; i < 10; i++) {
-			test2['_' + String.fromCharCode(i)] = i;
-		}
-		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
-			return test2[n];
-		});
-		if (order2.join('') !== '0123456789') {
-			return false;
-		}
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
-		var test3 = {};
-		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
-			test3[letter] = letter;
-		});
-		if (Object.keys(Object.assign({}, test3)).join('') !==
-				'abcdefghijklmnopqrst') {
-			return false;
-		}
-
-		return true;
-	} catch (err) {
-		// We don't expect any of the above to throw, but better to be safe.
-		return false;
-	}
-}
-
-module.exports = shouldUseNative() ? Object.assign : function (target, source) {
-	var from;
-	var to = toObject(target);
-	var symbols;
-
-	for (var s = 1; s < arguments.length; s++) {
-		from = Object(arguments[s]);
-
-		for (var key in from) {
-			if (hasOwnProperty.call(from, key)) {
-				to[key] = from[key];
-			}
-		}
-
-		if (getOwnPropertySymbols) {
-			symbols = getOwnPropertySymbols(from);
-			for (var i = 0; i < symbols.length; i++) {
-				if (propIsEnumerable.call(from, symbols[i])) {
-					to[symbols[i]] = from[symbols[i]];
-				}
-			}
-		}
-	}
-
-	return to;
-};
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function(process) {/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-
-
-var _prodInvariant = __webpack_require__(3);
-
-var DOMProperty = __webpack_require__(18);
-var ReactDOMComponentFlags = __webpack_require__(64);
-
-var invariant = __webpack_require__(1);
-
-var ATTR_NAME = DOMProperty.ID_ATTRIBUTE_NAME;
-var Flags = ReactDOMComponentFlags;
-
-var internalInstanceKey = '__reactInternalInstance$' + Math.random().toString(36).slice(2);
-
-/**
- * Check if a given node should be cached.
- */
-function shouldPrecacheNode(node, nodeID) {
-  return node.nodeType === 1 && node.getAttribute(ATTR_NAME) === String(nodeID) || node.nodeType === 8 && node.nodeValue === ' react-text: ' + nodeID + ' ' || node.nodeType === 8 && node.nodeValue === ' react-empty: ' + nodeID + ' ';
-}
-
-/**
- * Drill down (through composites and empty components) until we get a host or
- * host text component.
- *
- * This is pretty polymorphic but unavoidable with the current structure we have
- * for `_renderedChildren`.
- */
-function getRenderedHostOrTextFromComponent(component) {
-  var rendered;
-  while (rendered = component._renderedComponent) {
-    component = rendered;
-  }
-  return component;
-}
-
-/**
- * Populate `_hostNode` on the rendered host/text component with the given
- * DOM node. The passed `inst` can be a composite.
- */
-function precacheNode(inst, node) {
-  var hostInst = getRenderedHostOrTextFromComponent(inst);
-  hostInst._hostNode = node;
-  node[internalInstanceKey] = hostInst;
-}
-
-function uncacheNode(inst) {
-  var node = inst._hostNode;
-  if (node) {
-    delete node[internalInstanceKey];
-    inst._hostNode = null;
-  }
-}
-
-/**
- * Populate `_hostNode` on each child of `inst`, assuming that the children
- * match up with the DOM (element) children of `node`.
- *
- * We cache entire levels at once to avoid an n^2 problem where we access the
- * children of a node sequentially and have to walk from the start to our target
- * node every time.
- *
- * Since we update `_renderedChildren` and the actual DOM at (slightly)
- * different times, we could race here and see a newer `_renderedChildren` than
- * the DOM nodes we see. To avoid this, ReactMultiChild calls
- * `prepareToManageChildren` before we change `_renderedChildren`, at which
- * time the container's child nodes are always cached (until it unmounts).
- */
-function precacheChildNodes(inst, node) {
-  if (inst._flags & Flags.hasCachedChildNodes) {
-    return;
-  }
-  var children = inst._renderedChildren;
-  var childNode = node.firstChild;
-  outer: for (var name in children) {
-    if (!children.hasOwnProperty(name)) {
-      continue;
-    }
-    var childInst = children[name];
-    var childID = getRenderedHostOrTextFromComponent(childInst)._domID;
-    if (childID === 0) {
-      // We're currently unmounting this child in ReactMultiChild; skip it.
-      continue;
-    }
-    // We assume the child nodes are in the same order as the child instances.
-    for (; childNode !== null; childNode = childNode.nextSibling) {
-      if (shouldPrecacheNode(childNode, childID)) {
-        precacheNode(childInst, childNode);
-        continue outer;
-      }
-    }
-    // We reached the end of the DOM children without finding an ID match.
-     true ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Unable to find element with ID %s.', childID) : _prodInvariant('32', childID) : void 0;
-  }
-  inst._flags |= Flags.hasCachedChildNodes;
-}
-
-/**
- * Given a DOM node, return the closest ReactDOMComponent or
- * ReactDOMTextComponent instance ancestor.
- */
-function getClosestInstanceFromNode(node) {
-  if (node[internalInstanceKey]) {
-    return node[internalInstanceKey];
-  }
-
-  // Walk up the tree until we find an ancestor whose instance we have cached.
-  var parents = [];
-  while (!node[internalInstanceKey]) {
-    parents.push(node);
-    if (node.parentNode) {
-      node = node.parentNode;
-    } else {
-      // Top of the tree. This node must not be part of a React tree (or is
-      // unmounted, potentially).
-      return null;
-    }
-  }
-
-  var closest;
-  var inst;
-  for (; node && (inst = node[internalInstanceKey]); node = parents.pop()) {
-    closest = inst;
-    if (parents.length) {
-      precacheChildNodes(inst, node);
-    }
-  }
-
-  return closest;
-}
-
-/**
- * Given a DOM node, return the ReactDOMComponent or ReactDOMTextComponent
- * instance, or null if the node was not rendered by this React.
- */
-function getInstanceFromNode(node) {
-  var inst = getClosestInstanceFromNode(node);
-  if (inst != null && inst._hostNode === node) {
-    return inst;
-  } else {
-    return null;
-  }
-}
-
-/**
- * Given a ReactDOMComponent or ReactDOMTextComponent, return the corresponding
- * DOM node.
- */
-function getNodeFromInstance(inst) {
-  // Without this first invariant, passing a non-DOM-component triggers the next
-  // invariant for a missing parent, which is super confusing.
-  !(inst._hostNode !== undefined) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'getNodeFromInstance: Invalid argument.') : _prodInvariant('33') : void 0;
-
-  if (inst._hostNode) {
-    return inst._hostNode;
-  }
-
-  // Walk up the tree until we find an ancestor whose DOM node we have cached.
-  var parents = [];
-  while (!inst._hostNode) {
-    parents.push(inst);
-    !inst._hostParent ? process.env.NODE_ENV !== 'production' ? invariant(false, 'React DOM tree root should always have a node reference.') : _prodInvariant('34') : void 0;
-    inst = inst._hostParent;
-  }
-
-  // Now parents contains each ancestor that does *not* have a cached native
-  // node, and `inst` is the deepest ancestor that does.
-  for (; parents.length; inst = parents.pop()) {
-    precacheChildNodes(inst, inst._hostNode);
-  }
-
-  return inst._hostNode;
-}
-
-var ReactDOMComponentTree = {
-  getClosestInstanceFromNode: getClosestInstanceFromNode,
-  getInstanceFromNode: getInstanceFromNode,
-  getNodeFromInstance: getNodeFromInstance,
-  precacheChildNodes: precacheChildNodes,
-  precacheNode: precacheNode,
-  uncacheNode: uncacheNode
-};
-
-module.exports = ReactDOMComponentTree;
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = __webpack_require__(19);
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-
-
-var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
-
-/**
- * Simple, lightweight module assisting with the detection and context of
- * Worker. Helps avoid circular dependencies and allows code to reason about
- * whether or not they are in a Worker, even if they never include the main
- * `ReactWorker` dependency.
- */
-var ExecutionEnvironment = {
-
-  canUseDOM: canUseDOM,
-
-  canUseWorkers: typeof Worker !== 'undefined',
-
-  canUseEventListeners: canUseDOM && !!(window.addEventListener || window.attachEvent),
-
-  canUseViewport: canUseDOM && !!window.screen,
-
-  isInWorker: !canUseDOM // For now, this is true - might change in the future.
-
-};
-
-module.exports = ExecutionEnvironment;
-
-/***/ }),
-/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -961,24 +616,369 @@ function __makeTemplateObject(cooked, raw) {
 
 
 /***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/*
+object-assign
+(c) Sindre Sorhus
+@license MIT
+*/
+
+
+/* eslint-disable no-unused-vars */
+var getOwnPropertySymbols = Object.getOwnPropertySymbols;
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var propIsEnumerable = Object.prototype.propertyIsEnumerable;
+
+function toObject(val) {
+	if (val === null || val === undefined) {
+		throw new TypeError('Object.assign cannot be called with null or undefined');
+	}
+
+	return Object(val);
+}
+
+function shouldUseNative() {
+	try {
+		if (!Object.assign) {
+			return false;
+		}
+
+		// Detect buggy property enumeration order in older V8 versions.
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
+		var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
+		test1[5] = 'de';
+		if (Object.getOwnPropertyNames(test1)[0] === '5') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test2 = {};
+		for (var i = 0; i < 10; i++) {
+			test2['_' + String.fromCharCode(i)] = i;
+		}
+		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
+			return test2[n];
+		});
+		if (order2.join('') !== '0123456789') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test3 = {};
+		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
+			test3[letter] = letter;
+		});
+		if (Object.keys(Object.assign({}, test3)).join('') !==
+				'abcdefghijklmnopqrst') {
+			return false;
+		}
+
+		return true;
+	} catch (err) {
+		// We don't expect any of the above to throw, but better to be safe.
+		return false;
+	}
+}
+
+module.exports = shouldUseNative() ? Object.assign : function (target, source) {
+	var from;
+	var to = toObject(target);
+	var symbols;
+
+	for (var s = 1; s < arguments.length; s++) {
+		from = Object(arguments[s]);
+
+		for (var key in from) {
+			if (hasOwnProperty.call(from, key)) {
+				to[key] = from[key];
+			}
+		}
+
+		if (getOwnPropertySymbols) {
+			symbols = getOwnPropertySymbols(from);
+			for (var i = 0; i < symbols.length; i++) {
+				if (propIsEnumerable.call(from, symbols[i])) {
+					to[symbols[i]] = from[symbols[i]];
+				}
+			}
+		}
+	}
+
+	return to;
+};
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(process) {/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+
+
+var _prodInvariant = __webpack_require__(3);
+
+var DOMProperty = __webpack_require__(18);
+var ReactDOMComponentFlags = __webpack_require__(65);
+
+var invariant = __webpack_require__(1);
+
+var ATTR_NAME = DOMProperty.ID_ATTRIBUTE_NAME;
+var Flags = ReactDOMComponentFlags;
+
+var internalInstanceKey = '__reactInternalInstance$' + Math.random().toString(36).slice(2);
+
+/**
+ * Check if a given node should be cached.
+ */
+function shouldPrecacheNode(node, nodeID) {
+  return node.nodeType === 1 && node.getAttribute(ATTR_NAME) === String(nodeID) || node.nodeType === 8 && node.nodeValue === ' react-text: ' + nodeID + ' ' || node.nodeType === 8 && node.nodeValue === ' react-empty: ' + nodeID + ' ';
+}
+
+/**
+ * Drill down (through composites and empty components) until we get a host or
+ * host text component.
+ *
+ * This is pretty polymorphic but unavoidable with the current structure we have
+ * for `_renderedChildren`.
+ */
+function getRenderedHostOrTextFromComponent(component) {
+  var rendered;
+  while (rendered = component._renderedComponent) {
+    component = rendered;
+  }
+  return component;
+}
+
+/**
+ * Populate `_hostNode` on the rendered host/text component with the given
+ * DOM node. The passed `inst` can be a composite.
+ */
+function precacheNode(inst, node) {
+  var hostInst = getRenderedHostOrTextFromComponent(inst);
+  hostInst._hostNode = node;
+  node[internalInstanceKey] = hostInst;
+}
+
+function uncacheNode(inst) {
+  var node = inst._hostNode;
+  if (node) {
+    delete node[internalInstanceKey];
+    inst._hostNode = null;
+  }
+}
+
+/**
+ * Populate `_hostNode` on each child of `inst`, assuming that the children
+ * match up with the DOM (element) children of `node`.
+ *
+ * We cache entire levels at once to avoid an n^2 problem where we access the
+ * children of a node sequentially and have to walk from the start to our target
+ * node every time.
+ *
+ * Since we update `_renderedChildren` and the actual DOM at (slightly)
+ * different times, we could race here and see a newer `_renderedChildren` than
+ * the DOM nodes we see. To avoid this, ReactMultiChild calls
+ * `prepareToManageChildren` before we change `_renderedChildren`, at which
+ * time the container's child nodes are always cached (until it unmounts).
+ */
+function precacheChildNodes(inst, node) {
+  if (inst._flags & Flags.hasCachedChildNodes) {
+    return;
+  }
+  var children = inst._renderedChildren;
+  var childNode = node.firstChild;
+  outer: for (var name in children) {
+    if (!children.hasOwnProperty(name)) {
+      continue;
+    }
+    var childInst = children[name];
+    var childID = getRenderedHostOrTextFromComponent(childInst)._domID;
+    if (childID === 0) {
+      // We're currently unmounting this child in ReactMultiChild; skip it.
+      continue;
+    }
+    // We assume the child nodes are in the same order as the child instances.
+    for (; childNode !== null; childNode = childNode.nextSibling) {
+      if (shouldPrecacheNode(childNode, childID)) {
+        precacheNode(childInst, childNode);
+        continue outer;
+      }
+    }
+    // We reached the end of the DOM children without finding an ID match.
+     true ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Unable to find element with ID %s.', childID) : _prodInvariant('32', childID) : void 0;
+  }
+  inst._flags |= Flags.hasCachedChildNodes;
+}
+
+/**
+ * Given a DOM node, return the closest ReactDOMComponent or
+ * ReactDOMTextComponent instance ancestor.
+ */
+function getClosestInstanceFromNode(node) {
+  if (node[internalInstanceKey]) {
+    return node[internalInstanceKey];
+  }
+
+  // Walk up the tree until we find an ancestor whose instance we have cached.
+  var parents = [];
+  while (!node[internalInstanceKey]) {
+    parents.push(node);
+    if (node.parentNode) {
+      node = node.parentNode;
+    } else {
+      // Top of the tree. This node must not be part of a React tree (or is
+      // unmounted, potentially).
+      return null;
+    }
+  }
+
+  var closest;
+  var inst;
+  for (; node && (inst = node[internalInstanceKey]); node = parents.pop()) {
+    closest = inst;
+    if (parents.length) {
+      precacheChildNodes(inst, node);
+    }
+  }
+
+  return closest;
+}
+
+/**
+ * Given a DOM node, return the ReactDOMComponent or ReactDOMTextComponent
+ * instance, or null if the node was not rendered by this React.
+ */
+function getInstanceFromNode(node) {
+  var inst = getClosestInstanceFromNode(node);
+  if (inst != null && inst._hostNode === node) {
+    return inst;
+  } else {
+    return null;
+  }
+}
+
+/**
+ * Given a ReactDOMComponent or ReactDOMTextComponent, return the corresponding
+ * DOM node.
+ */
+function getNodeFromInstance(inst) {
+  // Without this first invariant, passing a non-DOM-component triggers the next
+  // invariant for a missing parent, which is super confusing.
+  !(inst._hostNode !== undefined) ? process.env.NODE_ENV !== 'production' ? invariant(false, 'getNodeFromInstance: Invalid argument.') : _prodInvariant('33') : void 0;
+
+  if (inst._hostNode) {
+    return inst._hostNode;
+  }
+
+  // Walk up the tree until we find an ancestor whose DOM node we have cached.
+  var parents = [];
+  while (!inst._hostNode) {
+    parents.push(inst);
+    !inst._hostParent ? process.env.NODE_ENV !== 'production' ? invariant(false, 'React DOM tree root should always have a node reference.') : _prodInvariant('34') : void 0;
+    inst = inst._hostParent;
+  }
+
+  // Now parents contains each ancestor that does *not* have a cached native
+  // node, and `inst` is the deepest ancestor that does.
+  for (; parents.length; inst = parents.pop()) {
+    precacheChildNodes(inst, inst._hostNode);
+  }
+
+  return inst._hostNode;
+}
+
+var ReactDOMComponentTree = {
+  getClosestInstanceFromNode: getClosestInstanceFromNode,
+  getInstanceFromNode: getInstanceFromNode,
+  getNodeFromInstance: getNodeFromInstance,
+  precacheChildNodes: precacheChildNodes,
+  precacheNode: precacheNode,
+  uncacheNode: uncacheNode
+};
+
+module.exports = ReactDOMComponentTree;
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = __webpack_require__(20);
+
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+
+
+var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+
+/**
+ * Simple, lightweight module assisting with the detection and context of
+ * Worker. Helps avoid circular dependencies and allows code to reason about
+ * whether or not they are in a Worker, even if they never include the main
+ * `ReactWorker` dependency.
+ */
+var ExecutionEnvironment = {
+
+  canUseDOM: canUseDOM,
+
+  canUseWorkers: typeof Worker !== 'undefined',
+
+  canUseEventListeners: canUseDOM && !!(window.addEventListener || window.attachEvent),
+
+  canUseViewport: canUseDOM && !!window.screen,
+
+  isInWorker: !canUseDOM // For now, this is true - might change in the future.
+
+};
+
+module.exports = ExecutionEnvironment;
+
+/***/ }),
 /* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Adapted from ReactART:
 // https://github.com/reactjs/react-art
 
-var Konva = __webpack_require__(191);
-var React = __webpack_require__(19);
+var Konva = __webpack_require__(196);
+var React = __webpack_require__(20);
 
-var PropTypes = __webpack_require__(193);
-var createClass = __webpack_require__(195);
+var PropTypes = __webpack_require__(198);
+var createClass = __webpack_require__(200);
 
-var ReactInstanceMap = __webpack_require__(25);
-var ReactMultiChild = __webpack_require__(79);
-var ReactUpdates = __webpack_require__(13);
+var ReactInstanceMap = __webpack_require__(26);
+var ReactMultiChild = __webpack_require__(80);
+var ReactUpdates = __webpack_require__(14);
 
-var assign = __webpack_require__(4);
-var emptyObject = __webpack_require__(26);
+var assign = __webpack_require__(5);
+var emptyObject = __webpack_require__(27);
 
 // some patching to make Konva.Node looks like DOM nodes
 var oldAdd = Konva.Container.prototype.add;
@@ -1371,7 +1371,7 @@ module.exports = ReactKonva;
 
 
 
-var _prodInvariant = __webpack_require__(22);
+var _prodInvariant = __webpack_require__(23);
 
 var ReactCurrentOwner = __webpack_require__(15);
 
@@ -1801,7 +1801,7 @@ module.exports = emptyFunction;
 var debugTool = null;
 
 if (process.env.NODE_ENV !== 'production') {
-  var ReactDebugTool = __webpack_require__(116);
+  var ReactDebugTool = __webpack_require__(121);
   debugTool = ReactDebugTool;
 }
 
@@ -1810,6 +1810,173 @@ module.exports = { debugTool: debugTool };
 
 /***/ }),
 /* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var const_1 = __webpack_require__(38);
+function PrepareLineProps(props) {
+    return {
+        stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
+        strokeWidth: props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH,
+    };
+}
+exports.PrepareLineProps = PrepareLineProps;
+function PrepareTextProps(props) {
+    return {
+        fill: props.fill || const_1.DEFAULT_FILL,
+        fontFamily: props.fontFamily || const_1.DEFAULT_FONT_FAMILY,
+        fontSize: const_1.DEFAULT_FONT_SIZE * (props.scale || const_1.DEFAULT_SCALE),
+        text: props.text || "",
+    };
+}
+exports.PrepareTextProps = PrepareTextProps;
+function PrepareCommonProps(props) {
+    var scale = props.scale || const_1.DEFAULT_SCALE;
+    return {
+        rotation: props.rotation,
+        scale: { x: scale, y: scale },
+        x: (props.x || 0) * scale,
+        y: (props.y || 0) * scale,
+        onDblClick: props.onDblClick,
+    };
+}
+exports.PrepareCommonProps = PrepareCommonProps;
+function RotatePoint(x, y, rotate) {
+    var temp;
+    if (rotate === 90) {
+        temp = x;
+        return {
+            x: -y,
+            y: temp,
+        };
+    }
+    else if (rotate === 180) {
+        return {
+            x: -x,
+            y: -y,
+        };
+    }
+    else if (rotate === 270) {
+        temp = -x;
+        return {
+            x: y,
+            y: temp,
+        };
+    }
+    else {
+        return { x: x, y: y };
+    }
+}
+exports.RotatePoint = RotatePoint;
+function PrepareBundle(x, y, width, height, props) {
+    if (props.rotation === 0) {
+        return {
+            x: props.x + x,
+            y: props.y + y,
+            width: width,
+            height: height,
+        };
+    }
+    else if (props.rotation === 90) {
+        return {
+            x: props.x - y,
+            y: props.y + x,
+            width: -1 * height,
+            height: width,
+        };
+    }
+    else if (props.rotation === 180) {
+        return {
+            x: props.x - x,
+            y: props.y - y,
+            width: -1 * width,
+            height: -1 * height,
+        };
+    }
+    else {
+        return {
+            x: props.x + y,
+            y: props.y - x,
+            width: height,
+            height: -1 * width,
+        };
+    }
+}
+exports.PrepareBundle = PrepareBundle;
+//#region definition of point labels 
+var labelIndex = 1;
+function prepare(lines) {
+    prepareClear(lines);
+    labelIndex = 1;
+    lines.sort(function (a, b) { if (a.component.type > b.component.type) {
+        return -1;
+    }
+    else {
+        return 1;
+    } })
+        .forEach(function (line) {
+        if (!line.label && line.component.type === "w") {
+            prepareLine(lines, line, labelIndex++);
+        }
+    });
+    lines.forEach(function (line) {
+        if (line.component.type !== "w") {
+            prepareAllConection(line, labelIndex++);
+        }
+    });
+    // console.log(JSON.stringify(lines, null, "  "));
+    console.log(lines.map((function (line) { return (line.component.type || "w") + " l:" + line.label + " con:[" + line.component.getPoints().map(function (con) { return con.x + "." + con.y + "-" + con.label; }).join("; ") + "]"; })));
+}
+exports.prepare = prepare;
+function prepareClear(lines) {
+    lines.forEach(function (line) {
+        line.label = undefined;
+        line.component.getPoints().forEach(function (connection) {
+            connection.label = undefined;
+        });
+    });
+}
+function prepareAllConection(line, label) {
+    line.component.getPoints().forEach(function (connection) {
+        if (!connection.label) {
+            connection.label = label++;
+        }
+    });
+}
+function lineConnectionIndex(line, connection) {
+    var fIndex = -1;
+    return line.component.getPoints().some(function (item, index) {
+        fIndex = index;
+        return (item.x === connection.x && item.y === connection.y);
+    }) ? fIndex : -1;
+}
+function prepareConnection(lines, connection, label) {
+    lines.forEach(function (line) {
+        var index = lineConnectionIndex(line, connection);
+        if (index !== -1) {
+            // line with the same connection
+            line.component.getPoints()[index].label = label;
+            if (line.component.type === "w") {
+                prepareLine(lines, line, label);
+            }
+        }
+    });
+}
+function prepareLine(lines, line, label) {
+    line.label = label;
+    line.component.getPoints().forEach(function (connection) {
+        if (!connection.label) {
+            prepareConnection(lines, connection, label);
+        }
+    });
+}
+//#endregion
+
+
+/***/ }),
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1824,13 +1991,13 @@ module.exports = { debugTool: debugTool };
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var CallbackQueue = __webpack_require__(68);
-var PooledClass = __webpack_require__(21);
-var ReactFeatureFlags = __webpack_require__(69);
-var ReactReconciler = __webpack_require__(23);
-var Transaction = __webpack_require__(32);
+var CallbackQueue = __webpack_require__(69);
+var PooledClass = __webpack_require__(22);
+var ReactFeatureFlags = __webpack_require__(70);
+var ReactReconciler = __webpack_require__(24);
+var Transaction = __webpack_require__(33);
 
 var invariant = __webpack_require__(1);
 
@@ -2064,78 +2231,6 @@ module.exports = ReactUpdates;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var const_1 = __webpack_require__(37);
-function PrepareLineProps(props) {
-    return {
-        stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
-        strokeWidth: props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH,
-    };
-}
-exports.PrepareLineProps = PrepareLineProps;
-function PrepareTextProps(props) {
-    return {
-        fill: props.fill || const_1.DEFAULT_FILL,
-        fontFamily: props.fontFamily || const_1.DEFAULT_FONT_FAMILY,
-        fontSize: const_1.DEFAULT_FONT_SIZE * (props.scale || const_1.DEFAULT_SCALE),
-        text: props.text || "",
-    };
-}
-exports.PrepareTextProps = PrepareTextProps;
-function PrepareCommonProps(props) {
-    var scale = props.scale || const_1.DEFAULT_SCALE;
-    return {
-        rotation: props.rotation,
-        scale: { x: scale, y: scale },
-        x: (props.x || 0) * scale,
-        y: (props.y || 0) * scale,
-        onDblClick: props.onDblClick,
-    };
-}
-exports.PrepareCommonProps = PrepareCommonProps;
-function PrepareBundle(x, y, width, height, props) {
-    if (props.rotation === 0) {
-        return {
-            x: props.x + x,
-            y: props.y + y,
-            width: width,
-            height: height,
-        };
-    }
-    else if (props.rotation === 90) {
-        return {
-            x: props.x - y,
-            y: props.y + x,
-            width: -1 * height,
-            height: width,
-        };
-    }
-    else if (props.rotation === 180) {
-        return {
-            x: props.x - x,
-            y: props.y - y,
-            width: -1 * width,
-            height: -1 * height,
-        };
-    }
-    else {
-        return {
-            x: props.x + y,
-            y: props.y - x,
-            width: height,
-            height: -1 * width,
-        };
-    }
-}
-exports.PrepareBundle = PrepareBundle;
-
-
-/***/ }),
 /* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2174,21 +2269,25 @@ module.exports = ReactCurrentOwner;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var ConnectionPoint = /** @class */ (function (_super) {
     tslib_1.__extends(ConnectionPoint, _super);
     function ConnectionPoint(props) {
         var _this = _super.call(this, props) || this;
+        _this.x = 0;
+        _this.y = 0;
         _this.state = {};
         return _this;
     }
     ConnectionPoint.prototype.render = function () {
         var _this = this;
         var argsLine = helper_1.PrepareLineProps(this.props);
-        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.props.x, _this.props.y, _this.props.x, _this.props.y); } })));
+        this.x = this.props.x + this.props.parent.props.x;
+        this.y = this.props.y + this.props.parent.props.y;
+        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.props.x, _this.props.y); } })));
     };
     return ConnectionPoint;
 }(React.Component));
@@ -2210,9 +2309,9 @@ exports.ConnectionPoint = ConnectionPoint;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var PooledClass = __webpack_require__(21);
+var PooledClass = __webpack_require__(22);
 
 var emptyFunction = __webpack_require__(11);
 var warning = __webpack_require__(2);
@@ -2688,6 +2787,70 @@ module.exports = DOMProperty;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var Device = /** @class */ (function () {
+    function Device() {
+    }
+    /**
+     * complete initial set up of device
+     */
+    Device.prototype.finalize = function () {
+        //
+    };
+    /**
+     * Load the linear elements in to Gl and C
+     * @param ckt
+     */
+    Device.prototype.load_linear = function (ckt) {
+        //
+    };
+    /**
+     * load linear system equations for dc analysis
+     * (inductors shorted and capacitors opened)
+     * @param ckt
+     * @param soln
+     * @param rhs
+     */
+    Device.prototype.load_dc = function (ckt, soln, rhs) {
+        //
+    };
+    /**
+     * load linear system equations for tran analysis
+     * @param ckt
+     * @param soln
+     */
+    // public load_tran(ckt: Circuit, soln: number[]) {
+    Device.prototype.load_tran = function (ckt, soln, rhs, time) {
+        //
+    };
+    /**
+     * load linear system equations for ac analysis:
+     * current sources open, voltage sources shorted
+     * linear models at operating point for everyone else
+     * @param ckt
+     * @param rhs
+     */
+    Device.prototype.load_ac = function (ckt, rhs) {
+        //
+    };
+    /**
+     * return time of next breakpoint for the device
+     * @param time
+     */
+    Device.prototype.breakpoint = function (time) {
+        //
+    };
+    return Device;
+}());
+exports.Device = Device;
+
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /* WEBPACK VAR INJECTION */(function(process) {/**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -2698,26 +2861,26 @@ module.exports = DOMProperty;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var ReactBaseClasses = __webpack_require__(56);
-var ReactChildren = __webpack_require__(92);
-var ReactDOMFactories = __webpack_require__(96);
-var ReactElement = __webpack_require__(20);
-var ReactPropTypes = __webpack_require__(100);
-var ReactVersion = __webpack_require__(102);
+var ReactBaseClasses = __webpack_require__(57);
+var ReactChildren = __webpack_require__(97);
+var ReactDOMFactories = __webpack_require__(101);
+var ReactElement = __webpack_require__(21);
+var ReactPropTypes = __webpack_require__(105);
+var ReactVersion = __webpack_require__(107);
 
-var createReactClass = __webpack_require__(103);
-var onlyChild = __webpack_require__(104);
+var createReactClass = __webpack_require__(108);
+var onlyChild = __webpack_require__(109);
 
 var createElement = ReactElement.createElement;
 var createFactory = ReactElement.createFactory;
 var cloneElement = ReactElement.cloneElement;
 
 if (process.env.NODE_ENV !== 'production') {
-  var lowPriorityWarning = __webpack_require__(38);
-  var canDefineProperty = __webpack_require__(30);
-  var ReactElementValidator = __webpack_require__(60);
+  var lowPriorityWarning = __webpack_require__(39);
+  var canDefineProperty = __webpack_require__(31);
+  var ReactElementValidator = __webpack_require__(61);
   var didWarnPropTypesDeprecated = false;
   createElement = ReactElementValidator.createElement;
   createFactory = ReactElementValidator.createFactory;
@@ -2820,7 +2983,7 @@ module.exports = React;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2834,15 +2997,15 @@ module.exports = React;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
 var ReactCurrentOwner = __webpack_require__(15);
 
 var warning = __webpack_require__(2);
-var canDefineProperty = __webpack_require__(30);
+var canDefineProperty = __webpack_require__(31);
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
-var REACT_ELEMENT_TYPE = __webpack_require__(58);
+var REACT_ELEMENT_TYPE = __webpack_require__(59);
 
 var RESERVED_PROPS = {
   key: true,
@@ -3165,7 +3328,7 @@ module.exports = ReactElement;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3281,7 +3444,7 @@ module.exports = PooledClass;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3323,7 +3486,7 @@ function reactProdInvariant(code) {
 module.exports = reactProdInvariant;
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3337,7 +3500,7 @@ module.exports = reactProdInvariant;
 
 
 
-var ReactRef = __webpack_require__(114);
+var ReactRef = __webpack_require__(119);
 var ReactInstrumentation = __webpack_require__(12);
 
 var warning = __webpack_require__(2);
@@ -3493,7 +3656,7 @@ module.exports = ReactReconciler;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3507,11 +3670,11 @@ module.exports = ReactReconciler;
 
 
 
-var DOMNamespaces = __webpack_require__(46);
-var setInnerHTML = __webpack_require__(34);
+var DOMNamespaces = __webpack_require__(47);
+var setInnerHTML = __webpack_require__(35);
 
-var createMicrosoftUnsafeLocalFunction = __webpack_require__(47);
-var setTextContent = __webpack_require__(73);
+var createMicrosoftUnsafeLocalFunction = __webpack_require__(48);
+var setTextContent = __webpack_require__(74);
 
 var ELEMENT_NODE_TYPE = 1;
 var DOCUMENT_FRAGMENT_NODE_TYPE = 11;
@@ -3614,7 +3777,7 @@ DOMLazyTree.queueText = queueText;
 module.exports = DOMLazyTree;
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3663,7 +3826,7 @@ var ReactInstanceMap = {
 module.exports = ReactInstanceMap;
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3687,7 +3850,7 @@ module.exports = emptyObject;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3701,11 +3864,11 @@ module.exports = emptyObject;
 
 
 
-var EventPluginHub = __webpack_require__(28);
-var EventPluginUtils = __webpack_require__(40);
+var EventPluginHub = __webpack_require__(29);
+var EventPluginUtils = __webpack_require__(41);
 
-var accumulateInto = __webpack_require__(65);
-var forEachAccumulated = __webpack_require__(66);
+var accumulateInto = __webpack_require__(66);
+var forEachAccumulated = __webpack_require__(67);
 var warning = __webpack_require__(2);
 
 var getListener = EventPluginHub.getListener;
@@ -3825,7 +3988,7 @@ module.exports = EventPropagators;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3841,12 +4004,12 @@ module.exports = EventPropagators;
 
 var _prodInvariant = __webpack_require__(3);
 
-var EventPluginRegistry = __webpack_require__(31);
-var EventPluginUtils = __webpack_require__(40);
-var ReactErrorUtils = __webpack_require__(41);
+var EventPluginRegistry = __webpack_require__(32);
+var EventPluginUtils = __webpack_require__(41);
+var ReactErrorUtils = __webpack_require__(42);
 
-var accumulateInto = __webpack_require__(65);
-var forEachAccumulated = __webpack_require__(66);
+var accumulateInto = __webpack_require__(66);
+var forEachAccumulated = __webpack_require__(67);
 var invariant = __webpack_require__(1);
 
 /**
@@ -4103,7 +4266,7 @@ module.exports = EventPluginHub;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4119,7 +4282,7 @@ module.exports = EventPluginHub;
 
 var SyntheticEvent = __webpack_require__(17);
 
-var getEventTarget = __webpack_require__(42);
+var getEventTarget = __webpack_require__(43);
 
 /**
  * @interface UIEvent
@@ -4165,7 +4328,7 @@ SyntheticEvent.augmentClass(SyntheticUIEvent, UIEventInterface);
 module.exports = SyntheticUIEvent;
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4195,7 +4358,7 @@ module.exports = canDefineProperty;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4452,7 +4615,7 @@ module.exports = EventPluginRegistry;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4684,7 +4847,7 @@ module.exports = TransactionImpl;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4698,10 +4861,10 @@ module.exports = TransactionImpl;
 
 
 
-var SyntheticUIEvent = __webpack_require__(29);
-var ViewportMetrics = __webpack_require__(72);
+var SyntheticUIEvent = __webpack_require__(30);
+var ViewportMetrics = __webpack_require__(73);
 
-var getEventModifierState = __webpack_require__(44);
+var getEventModifierState = __webpack_require__(45);
 
 /**
  * @interface MouseEvent
@@ -4759,7 +4922,7 @@ SyntheticUIEvent.augmentClass(SyntheticMouseEvent, MouseEventInterface);
 module.exports = SyntheticMouseEvent;
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4773,13 +4936,13 @@ module.exports = SyntheticMouseEvent;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
-var DOMNamespaces = __webpack_require__(46);
+var ExecutionEnvironment = __webpack_require__(8);
+var DOMNamespaces = __webpack_require__(47);
 
 var WHITESPACE_TEST = /^[ \r\n\t\f]/;
 var NONVISIBLE_TEST = /<(!--|link|noscript|meta|script|style)[ \r\n\t\f\/>]/;
 
-var createMicrosoftUnsafeLocalFunction = __webpack_require__(47);
+var createMicrosoftUnsafeLocalFunction = __webpack_require__(48);
 
 // SVG temp container for IE lacking innerHTML
 var reusableSVGContainer;
@@ -4860,7 +5023,7 @@ if (ExecutionEnvironment.canUseDOM) {
 module.exports = setInnerHTML;
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4985,7 +5148,7 @@ function escapeTextContentForBrowser(text) {
 module.exports = escapeTextContentForBrowser;
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4999,14 +5162,14 @@ module.exports = escapeTextContentForBrowser;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var EventPluginRegistry = __webpack_require__(31);
-var ReactEventEmitterMixin = __webpack_require__(140);
-var ViewportMetrics = __webpack_require__(72);
+var EventPluginRegistry = __webpack_require__(32);
+var ReactEventEmitterMixin = __webpack_require__(145);
+var ViewportMetrics = __webpack_require__(73);
 
-var getVendorPrefixedEventName = __webpack_require__(141);
-var isEventSupported = __webpack_require__(43);
+var getVendorPrefixedEventName = __webpack_require__(146);
+var isEventSupported = __webpack_require__(44);
 
 /**
  * Summary of `ReactBrowserEventEmitter` event handling:
@@ -5312,7 +5475,7 @@ var ReactBrowserEventEmitter = _assign({}, ReactEventEmitterMixin, {
 module.exports = ReactBrowserEventEmitter;
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5334,7 +5497,7 @@ exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5403,7 +5566,7 @@ module.exports = lowPriorityWarning;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5422,7 +5585,7 @@ module.exports = ReactPropTypesSecret;
 
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5438,7 +5601,7 @@ module.exports = ReactPropTypesSecret;
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactErrorUtils = __webpack_require__(41);
+var ReactErrorUtils = __webpack_require__(42);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -5652,7 +5815,7 @@ module.exports = EventPluginUtils;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5734,7 +5897,7 @@ module.exports = ReactErrorUtils;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 42 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5772,7 +5935,7 @@ function getEventTarget(nativeEvent) {
 module.exports = getEventTarget;
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5786,7 +5949,7 @@ module.exports = getEventTarget;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
 var useHasFeature;
 if (ExecutionEnvironment.canUseDOM) {
@@ -5835,7 +5998,7 @@ function isEventSupported(eventNameSuffix, capture) {
 module.exports = isEventSupported;
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5881,7 +6044,7 @@ function getEventModifierState(nativeEvent) {
 module.exports = getEventModifierState;
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5895,14 +6058,14 @@ module.exports = getEventModifierState;
 
 
 
-var DOMLazyTree = __webpack_require__(24);
-var Danger = __webpack_require__(125);
-var ReactDOMComponentTree = __webpack_require__(5);
+var DOMLazyTree = __webpack_require__(25);
+var Danger = __webpack_require__(130);
+var ReactDOMComponentTree = __webpack_require__(6);
 var ReactInstrumentation = __webpack_require__(12);
 
-var createMicrosoftUnsafeLocalFunction = __webpack_require__(47);
-var setInnerHTML = __webpack_require__(34);
-var setTextContent = __webpack_require__(73);
+var createMicrosoftUnsafeLocalFunction = __webpack_require__(48);
+var setInnerHTML = __webpack_require__(35);
+var setTextContent = __webpack_require__(74);
 
 function getNodeAfter(parentNode, node) {
   // Special case for text components, which return [open, close] comments
@@ -6111,7 +6274,7 @@ module.exports = DOMChildrenOperations;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6134,7 +6297,7 @@ var DOMNamespaces = {
 module.exports = DOMNamespaces;
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6169,7 +6332,7 @@ var createMicrosoftUnsafeLocalFunction = function (func) {
 module.exports = createMicrosoftUnsafeLocalFunction;
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6185,10 +6348,10 @@ module.exports = createMicrosoftUnsafeLocalFunction;
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactPropTypesSecret = __webpack_require__(77);
-var propTypesFactory = __webpack_require__(61);
+var ReactPropTypesSecret = __webpack_require__(78);
+var propTypesFactory = __webpack_require__(62);
 
-var React = __webpack_require__(19);
+var React = __webpack_require__(20);
 var PropTypes = propTypesFactory(React.isValidElement);
 
 var invariant = __webpack_require__(1);
@@ -6311,7 +6474,7 @@ module.exports = LinkedValueUtils;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6359,7 +6522,7 @@ module.exports = ReactComponentEnvironment;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6430,7 +6593,7 @@ function shallowEqual(objA, objB) {
 module.exports = shallowEqual;
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6475,7 +6638,7 @@ function shouldUpdateReactComponent(prevElement, nextElement) {
 module.exports = shouldUpdateReactComponent;
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6537,7 +6700,7 @@ var KeyEscapeUtils = {
 module.exports = KeyEscapeUtils;
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6554,9 +6717,9 @@ module.exports = KeyEscapeUtils;
 var _prodInvariant = __webpack_require__(3);
 
 var ReactCurrentOwner = __webpack_require__(15);
-var ReactInstanceMap = __webpack_require__(25);
+var ReactInstanceMap = __webpack_require__(26);
 var ReactInstrumentation = __webpack_require__(12);
-var ReactUpdates = __webpack_require__(13);
+var ReactUpdates = __webpack_require__(14);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -6775,7 +6938,7 @@ module.exports = ReactUpdateQueue;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6789,7 +6952,7 @@ module.exports = ReactUpdateQueue;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
 var emptyFunction = __webpack_require__(11);
 var warning = __webpack_require__(2);
@@ -7150,7 +7313,7 @@ module.exports = validateDOMNesting;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7203,7 +7366,7 @@ function getEventCharCode(nativeEvent) {
 module.exports = getEventCharCode;
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7217,15 +7380,15 @@ module.exports = getEventCharCode;
 
 
 
-var _prodInvariant = __webpack_require__(22),
-    _assign = __webpack_require__(4);
+var _prodInvariant = __webpack_require__(23),
+    _assign = __webpack_require__(5);
 
-var ReactNoopUpdateQueue = __webpack_require__(57);
+var ReactNoopUpdateQueue = __webpack_require__(58);
 
-var canDefineProperty = __webpack_require__(30);
-var emptyObject = __webpack_require__(26);
+var canDefineProperty = __webpack_require__(31);
+var emptyObject = __webpack_require__(27);
 var invariant = __webpack_require__(1);
-var lowPriorityWarning = __webpack_require__(38);
+var lowPriorityWarning = __webpack_require__(39);
 
 /**
  * Base class helpers for the updating state of a component.
@@ -7350,7 +7513,7 @@ module.exports = {
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7449,7 +7612,7 @@ module.exports = ReactNoopUpdateQueue;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7472,7 +7635,7 @@ var REACT_ELEMENT_TYPE = typeof Symbol === 'function' && Symbol['for'] && Symbol
 module.exports = REACT_ELEMENT_TYPE;
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7516,7 +7679,7 @@ function getIteratorFn(maybeIterable) {
 module.exports = getIteratorFn;
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7539,14 +7702,14 @@ module.exports = getIteratorFn;
 
 var ReactCurrentOwner = __webpack_require__(15);
 var ReactComponentTreeHook = __webpack_require__(10);
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
-var checkReactTypeSpec = __webpack_require__(97);
+var checkReactTypeSpec = __webpack_require__(102);
 
-var canDefineProperty = __webpack_require__(30);
-var getIteratorFn = __webpack_require__(59);
+var canDefineProperty = __webpack_require__(31);
+var getIteratorFn = __webpack_require__(60);
 var warning = __webpack_require__(2);
-var lowPriorityWarning = __webpack_require__(38);
+var lowPriorityWarning = __webpack_require__(39);
 
 function getDeclarationErrorAddendum() {
   if (ReactCurrentOwner.current) {
@@ -7775,7 +7938,7 @@ module.exports = ReactElementValidator;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7792,7 +7955,7 @@ module.exports = ReactElementValidator;
 // Therefore we re-export development-only version with all the PropTypes checks here.
 // However if one is migrating to the `prop-types` npm library, they will go through the
 // `index.js` entry point, and it will branch depending on the environment.
-var factory = __webpack_require__(62);
+var factory = __webpack_require__(63);
 module.exports = function(isValidElement) {
   // It is still allowed in 15.5.
   var throwOnDirectAccess = false;
@@ -7801,7 +7964,7 @@ module.exports = function(isValidElement) {
 
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7817,10 +7980,10 @@ module.exports = function(isValidElement) {
 var emptyFunction = __webpack_require__(11);
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
-var assign = __webpack_require__(4);
+var assign = __webpack_require__(5);
 
-var ReactPropTypesSecret = __webpack_require__(39);
-var checkPropTypes = __webpack_require__(101);
+var ReactPropTypesSecret = __webpack_require__(40);
+var checkPropTypes = __webpack_require__(106);
 
 module.exports = function(isValidElement, throwOnDirectAccess) {
   /* global Symbol */
@@ -8351,7 +8514,7 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8365,9 +8528,9 @@ module.exports = function(isValidElement, throwOnDirectAccess) {
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var emptyObject = __webpack_require__(26);
+var emptyObject = __webpack_require__(27);
 var _invariant = __webpack_require__(1);
 
 if (process.env.NODE_ENV !== 'production') {
@@ -9229,7 +9392,7 @@ module.exports = factory;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9250,7 +9413,7 @@ var ReactDOMComponentFlags = {
 module.exports = ReactDOMComponentFlags;
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9312,7 +9475,7 @@ module.exports = accumulateInto;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9346,7 +9509,7 @@ function forEachAccumulated(arr, cb, scope) {
 module.exports = forEachAccumulated;
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9360,7 +9523,7 @@ module.exports = forEachAccumulated;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
 var contentKey = null;
 
@@ -9382,7 +9545,7 @@ function getTextContentAccessor() {
 module.exports = getTextContentAccessor;
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9401,7 +9564,7 @@ var _prodInvariant = __webpack_require__(3);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var PooledClass = __webpack_require__(21);
+var PooledClass = __webpack_require__(22);
 
 var invariant = __webpack_require__(1);
 
@@ -9505,7 +9668,7 @@ module.exports = PooledClass.addPoolingTo(CallbackQueue);
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9530,7 +9693,7 @@ var ReactFeatureFlags = {
 module.exports = ReactFeatureFlags;
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9544,7 +9707,7 @@ module.exports = ReactFeatureFlags;
 
 
 
-var ReactDOMComponentTree = __webpack_require__(5);
+var ReactDOMComponentTree = __webpack_require__(6);
 
 function isCheckable(elem) {
   var type = elem.type;
@@ -9656,7 +9819,7 @@ var inputValueTracking = {
 module.exports = inputValueTracking;
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9710,7 +9873,7 @@ function isTextInputElement(elem) {
 module.exports = isTextInputElement;
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9738,7 +9901,7 @@ var ViewportMetrics = {
 module.exports = ViewportMetrics;
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9752,9 +9915,9 @@ module.exports = ViewportMetrics;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
-var escapeTextContentForBrowser = __webpack_require__(35);
-var setInnerHTML = __webpack_require__(34);
+var ExecutionEnvironment = __webpack_require__(8);
+var escapeTextContentForBrowser = __webpack_require__(36);
+var setInnerHTML = __webpack_require__(35);
 
 /**
  * Set the textContent property of a node, ensuring that whitespace is preserved
@@ -9793,7 +9956,7 @@ if (ExecutionEnvironment.canUseDOM) {
 module.exports = setTextContent;
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9823,7 +9986,7 @@ function focusNode(node) {
 module.exports = focusNode;
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9981,7 +10144,7 @@ var CSSProperty = {
 module.exports = CSSProperty;
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9996,10 +10159,10 @@ module.exports = CSSProperty;
 
 
 var DOMProperty = __webpack_require__(18);
-var ReactDOMComponentTree = __webpack_require__(5);
+var ReactDOMComponentTree = __webpack_require__(6);
 var ReactInstrumentation = __webpack_require__(12);
 
-var quoteAttributeValueForBrowser = __webpack_require__(139);
+var quoteAttributeValueForBrowser = __webpack_require__(144);
 var warning = __webpack_require__(2);
 
 var VALID_ATTRIBUTE_NAME_REGEX = new RegExp('^[' + DOMProperty.ATTRIBUTE_NAME_START_CHAR + '][' + DOMProperty.ATTRIBUTE_NAME_CHAR + ']*$');
@@ -10220,7 +10383,7 @@ module.exports = DOMPropertyOperations;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10240,7 +10403,7 @@ var ReactPropTypesSecret = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
 module.exports = ReactPropTypesSecret;
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10254,11 +10417,11 @@ module.exports = ReactPropTypesSecret;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var LinkedValueUtils = __webpack_require__(48);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactUpdates = __webpack_require__(13);
+var LinkedValueUtils = __webpack_require__(49);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactUpdates = __webpack_require__(14);
 
 var warning = __webpack_require__(2);
 
@@ -10444,7 +10607,7 @@ module.exports = ReactDOMSelect;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10460,16 +10623,16 @@ module.exports = ReactDOMSelect;
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactComponentEnvironment = __webpack_require__(49);
-var ReactInstanceMap = __webpack_require__(25);
+var ReactComponentEnvironment = __webpack_require__(50);
+var ReactInstanceMap = __webpack_require__(26);
 var ReactInstrumentation = __webpack_require__(12);
 
 var ReactCurrentOwner = __webpack_require__(15);
-var ReactReconciler = __webpack_require__(23);
-var ReactChildReconciler = __webpack_require__(145);
+var ReactReconciler = __webpack_require__(24);
+var ReactChildReconciler = __webpack_require__(150);
 
 var emptyFunction = __webpack_require__(11);
-var flattenChildren = __webpack_require__(152);
+var flattenChildren = __webpack_require__(157);
 var invariant = __webpack_require__(1);
 
 /**
@@ -10894,7 +11057,7 @@ module.exports = ReactMultiChild;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10909,13 +11072,13 @@ module.exports = ReactMultiChild;
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var ReactCompositeComponent = __webpack_require__(146);
-var ReactEmptyComponent = __webpack_require__(82);
-var ReactHostComponent = __webpack_require__(83);
+var ReactCompositeComponent = __webpack_require__(151);
+var ReactEmptyComponent = __webpack_require__(83);
+var ReactHostComponent = __webpack_require__(84);
 
-var getNextDebugID = __webpack_require__(149);
+var getNextDebugID = __webpack_require__(154);
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
 
@@ -11027,7 +11190,7 @@ module.exports = instantiateReactComponent;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11044,7 +11207,7 @@ module.exports = instantiateReactComponent;
 
 var _prodInvariant = __webpack_require__(3);
 
-var React = __webpack_require__(19);
+var React = __webpack_require__(20);
 
 var invariant = __webpack_require__(1);
 
@@ -11071,7 +11234,7 @@ module.exports = ReactNodeTypes;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11104,7 +11267,7 @@ ReactEmptyComponent.injection = ReactEmptyComponentInjection;
 module.exports = ReactEmptyComponent;
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11176,7 +11339,7 @@ module.exports = ReactHostComponent;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11193,11 +11356,11 @@ module.exports = ReactHostComponent;
 var _prodInvariant = __webpack_require__(3);
 
 var ReactCurrentOwner = __webpack_require__(15);
-var REACT_ELEMENT_TYPE = __webpack_require__(150);
+var REACT_ELEMENT_TYPE = __webpack_require__(155);
 
-var getIteratorFn = __webpack_require__(151);
+var getIteratorFn = __webpack_require__(156);
 var invariant = __webpack_require__(1);
-var KeyEscapeUtils = __webpack_require__(52);
+var KeyEscapeUtils = __webpack_require__(53);
 var warning = __webpack_require__(2);
 
 var SEPARATOR = '.';
@@ -11356,7 +11519,7 @@ module.exports = traverseAllChildren;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11437,7 +11600,7 @@ module.exports = EventListener;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11451,11 +11614,11 @@ module.exports = EventListener;
 
 
 
-var ReactDOMSelection = __webpack_require__(163);
+var ReactDOMSelection = __webpack_require__(168);
 
-var containsNode = __webpack_require__(165);
-var focusNode = __webpack_require__(74);
-var getActiveElement = __webpack_require__(87);
+var containsNode = __webpack_require__(170);
+var focusNode = __webpack_require__(75);
+var getActiveElement = __webpack_require__(88);
 
 function isInDocument(node) {
   return containsNode(document.documentElement, node);
@@ -11563,7 +11726,7 @@ var ReactInputSelection = {
 module.exports = ReactInputSelection;
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11605,7 +11768,7 @@ function getActiveElement(doc) /*?DOMElement*/{
 module.exports = getActiveElement;
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11621,27 +11784,27 @@ module.exports = getActiveElement;
 
 var _prodInvariant = __webpack_require__(3);
 
-var DOMLazyTree = __webpack_require__(24);
+var DOMLazyTree = __webpack_require__(25);
 var DOMProperty = __webpack_require__(18);
-var React = __webpack_require__(19);
-var ReactBrowserEventEmitter = __webpack_require__(36);
+var React = __webpack_require__(20);
+var ReactBrowserEventEmitter = __webpack_require__(37);
 var ReactCurrentOwner = __webpack_require__(15);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactDOMContainerInfo = __webpack_require__(180);
-var ReactDOMFeatureFlags = __webpack_require__(181);
-var ReactFeatureFlags = __webpack_require__(69);
-var ReactInstanceMap = __webpack_require__(25);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMContainerInfo = __webpack_require__(185);
+var ReactDOMFeatureFlags = __webpack_require__(186);
+var ReactFeatureFlags = __webpack_require__(70);
+var ReactInstanceMap = __webpack_require__(26);
 var ReactInstrumentation = __webpack_require__(12);
-var ReactMarkupChecksum = __webpack_require__(182);
-var ReactReconciler = __webpack_require__(23);
-var ReactUpdateQueue = __webpack_require__(53);
-var ReactUpdates = __webpack_require__(13);
+var ReactMarkupChecksum = __webpack_require__(187);
+var ReactReconciler = __webpack_require__(24);
+var ReactUpdateQueue = __webpack_require__(54);
+var ReactUpdates = __webpack_require__(14);
 
-var emptyObject = __webpack_require__(26);
-var instantiateReactComponent = __webpack_require__(80);
+var emptyObject = __webpack_require__(27);
+var instantiateReactComponent = __webpack_require__(81);
 var invariant = __webpack_require__(1);
-var setInnerHTML = __webpack_require__(34);
-var shouldUpdateReactComponent = __webpack_require__(51);
+var setInnerHTML = __webpack_require__(35);
+var shouldUpdateReactComponent = __webpack_require__(52);
 var warning = __webpack_require__(2);
 
 var ATTR_NAME = DOMProperty.ID_ATTRIBUTE_NAME;
@@ -12147,7 +12310,7 @@ module.exports = ReactMount;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12161,7 +12324,7 @@ module.exports = ReactMount;
 
 
 
-var ReactNodeTypes = __webpack_require__(81);
+var ReactNodeTypes = __webpack_require__(82);
 
 function getHostComponentFromComposite(inst) {
   var type;
@@ -12180,14 +12343,14 @@ function getHostComponentFromComposite(inst) {
 module.exports = getHostComponentFromComposite;
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var Icon = /** @class */ (function (_super) {
     tslib_1.__extends(Icon, _super);
     function Icon(props) {
@@ -12204,20 +12367,666 @@ exports.Icon = Icon;
 
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(6);
-var ReactDOM = __webpack_require__(105);
-var app_1 = __webpack_require__(190);
+// types of "nodes" in the linear system
+exports.T_VOLTAGE = 0;
+exports.T_CURRENT = 1;
+/**
+ * Voltage limited Newton great for Mos/diodes
+ */
+exports.v_newt_lim = 0.3;
+/**
+ * Absolute voltage error tolerance
+ */
+exports.v_abstol = 1e-6;
+exports.i_abstol = 1e-12; // Absolute current error tolerance
+exports.eps = 1.0e-12; // A very small number compared to one.
+exports.dc_max_iters = 1000; // max iterations before giving up
+exports.max_tran_iters = 20; // max iterations before giving up
+exports.time_step_increase_factor = 2.0; // How much can lte let timestep grow.
+exports.lte_step_decrease_factor = 8; // Limit lte one-iter timestep shrink.
+exports.nr_step_decrease_factor = 4; // Newton failure timestep shrink.
+exports.reltol = 0.0001; // Relative tol to max observed value
+exports.lterel = 10; // LTE/Newton tolerance ratio (> 10!)
+exports.res_check_abs = Math.sqrt(exports.i_abstol); // Loose Newton residue check
+exports.res_check_rel = Math.sqrt(exports.reltol); // Loose Newton residue check
+
+
+/***/ }),
+/* 93 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.i18n = {
+    error1: "Sorry, there a browser error in starting the schematic tool.  We recommend using the latest versions of Firefox and Chrome.",
+    Ground_connection: "Ground connection",
+    Node_label: "Node label",
+    Voltage_source: "Voltage source",
+    Current_source: "Current source",
+    Resistor: "Resistor",
+    Capacitor: "Capacitor",
+    Inductor: "Inductor",
+    Op_Amp: "Op Amp",
+    Diode: "Diode",
+    NFet: "NFet",
+    PFet: "PFet",
+    Voltage_probe: "Voltage probe",
+    Current_probe: "Current probe",
+    drag_onto_diagram: ": drag or tap to insert",
+    Help: "Help: display the help page",
+    Grid: "Grid: toggle grid display",
+    Link_tip: "Link: share a link to the circuit",
+    Cut: "Cut selected components to the clipboard",
+    Copy: "Copy selected components to the clipboard",
+    Paste: "Paste clipboard to the schematic",
+    Delete: "Delete selected components",
+    Rotate: "Rotate selected component",
+    Save_netlist: "Save netlist",
+    Open_netlist: "Open netlist",
+    Select_netlist: "Select netlist",
+    Perform_DC_Analysis: "Perform a DC Analysis",
+    DC_Analysis: "DC Analysis",
+    Perform_AC_Analysis: "Perform an AC Small-Signal Analysis",
+    Perform_Transient_Analysis: "Perform a Transient Analysis",
+    Transient_Analysis: "Transient Analysis",
+    Edit_Properties: "Edit Properties",
+    Link: "Link",
+    Sharable_Link: "Sharable link",
+    points_per_decade: "Number of points/decade",
+    Starting_frequency: "Starting frequency (Hz)",
+    Ending_frequency: "Ending frequency (Hz)",
+    source_for_ac: "Name of V or I source for ac",
+    AC_Analysis_add_a_voltage_probe: "AC Analysis: add a voltage probe to the diagram!",
+    AC_Analysis: "AC Analysis",
+    Zero_ac_response: "Zero ac response, -infinity on DB scale.",
+    Near_zero_ac_response: "Near zero ac response, remove ",
+    probe: " probe",
+    // Alerts and warnings from the circuit simulator
+    Alert: "Alert",
+    ckt_alert1: "Warning!!! Circuit has a voltage source loop or a source or current probe shorted by a wire, please remove the source or the wire causing the short.",
+    ckt_alert2: "Warning!!! Simulator might produce meaningless results or no result with illegal circuits.",
+    ckt_warning1: "Warning: two circuit elements share the same name ",
+    ckt_alert3: "Please make at least one connection to ground (triangle symbol)",
+    ckt_alert4: "Newton Method failed, do your current sources have a conductive path to ground?",
+    ckt_alert5: "Newton Method failed, it may be your circuit or it may be our simulator.",
+    ckt_alert6: "DC failed, trying transient analysis from zero.",
+    ckt_alert7: "AC analysis refers to unknown source ",
+    ckt_alert8: "AC analysis failed, unknown source",
+    ckt_error1: "Rows of M mismatched to b or cols mismatch to x.",
+    ckt_error2: "Row or columns of A too large for B",
+    ckt_error3: "Row or columns of A too large for C",
+    ckt_error4: "scalea and scaleb must be scalars or Arrays",
+    ckt_error5: "Rows or cols > rows or cols of dest",
+    ckt_error6: "Rows or cols > cols or rows of dest",
+    log_Frequency: "log(Frequency in Hz)",
+    degrees: "degrees",
+    AC_Phase: "AC Phase",
+    AC_Magnitude: "AC Magnitude",
+    Minimum_number_of_timepoints: "Minimum number of timepoints",
+    Stop_time_seconds: "Stop time (seconds)",
+    tstop_lbl: "stop time",
+    Transient_Analysis_add_a_probe: "Transient Analysis: add a probe to the diagram!",
+    // Use creating phrasing to get this right: 
+    // alert('The ' + color + ' probe is connected to node ' + '"' + label + '"' + ' which is not an actual circuit node');
+    The: "The ",
+    probe_is_connected_to_node: " probe is connected to node ",
+    which_is_not_an_actual_circuit_node: " which is not an actual circuit node",
+    Voltage: "Voltage",
+    Current: "Current",
+    Time: "Time",
+    Node_has_two_conflicting_labels: "Node has two conflicting labels: ",
+    DC_value: "DC value",
+    impulse: "impulse",
+    Height: "Height",
+    Width: "Width (secs)",
+    step: "step",
+    Initial_value: "Initial value",
+    Plateau_value: "Plateau value",
+    Delay_until_step: "Delay until step (secs)",
+    Rise_time: "Rise time (secs)",
+    square: "square",
+    Frequency: "Frequency (Hz)",
+    Duty_cycle: "Duty cycle (%)",
+    triangle: "triangle",
+    pwl: "pwl",
+    pwl_repeating: "pwl (repeating)",
+    Comma_separated_list: "Comma-separated list of alternating times and values",
+    pulse: "pulse",
+    Delay_until_pulse: "Delay until pulse (secs)",
+    Time_for_first_transition: "Time for first transition (secs)",
+    Time_for_second_transition: "Time for second transition (secs)",
+    Pulse_width: "Pulse width (secs)",
+    Period: "Period (secs)",
+    sin: "sin",
+    Offset_value: "Offset value",
+    Amplitude: "Amplitude",
+    Delay_until_sin_starts: "Delay until sin starts (secs)",
+    Phase_offset_degrees: "Phase offset (degrees)",
+    Circuit_Sandbox_Help: "CIRCUIT SANDBOX HELP",
+    name: "Name",
+    value: "Value",
+    label: "Label",
+    r: "R",
+    c: "C",
+    l: "L",
+    color: "Color",
+    offset: "Offset",
+    area: "Area",
+    type: "Type",
+    normal: "normal",
+    ideal: "ideal",
+    WL: "W/L",
+    A: "A",
+    Plot_color: "Plot color",
+    Plot_offset: "Plot offset",
+    dc: "dc",
+    red: "red",
+    green: "green",
+    blue: "blue",
+    cyan: "cyan",
+    magenta: "magenta",
+    yellow: "yellow",
+    black: "black",
+    xaxis: "x axis",
+    last_line: "last line, no comma",
+};
+exports.strSHelp = "CIRCUIT SANDBOX HELP\n\n"; // embedded Help 
+exports.strAddC = "Add component: Tap on a part in the parts bin, then tap on the schematic to add.\n\n";
+exports.strAddW = "Add wire: Wires start at connection points (open circles). Touch on a connection to start a wire, drag, and release.\n\n";
+exports.strSel = "Select: Drag a rectangle to select components. \n(desktop:) Shift-click to include another component.\n\n";
+exports.strMove = "Move: Touch and drag to a new location.\n\n";
+exports.strDel = "Delete: Tap to select, then tap the X icon or hit BACKSPACE.\n\n";
+exports.strRot = "Rotate/Reflect: Click to select, then click on the rotation icon or type the letter \"r\" to rotate 90. Repeat for more rotations and reflections (8 total).\n\n";
+exports.strProp = "Properties: Double tap on a component to change properties like resistance or voltage.\n\n";
+exports.strNum = "Numbers may be entered using engineering notation:\n\
+    T\t10^12     m\t10^-3    \n\
+    G\t10^9       u\t10^-6   \n\
+    M\t10^6       n\t10^-9   \n\
+    k \t10^3       p\t10^-12 \n\
+                        f\t10^-15";
+
+
+/***/ }),
+/* 94 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//  Parse numbers in engineering notation
+//
+///////////////////////////////////////////////////////////////////////////////
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * convert first character of argument into an integer
+ * @param ch
+ */
+function ord(ch) {
+    return ch.charCodeAt(0);
+}
+exports.ord = ord;
+/**
+ * convert string argument to a number, accepting usual notations
+ * (hex, octal, binary, decimal, floating point) plus engineering
+ * scale factors (eg, 1k = 1000.0 = 1e3).
+ * return default if argument couldn't be interpreted as a number
+ * @param s
+ * @param default_v
+ */
+function parse_number(s, default_v) {
+    var slen = s.length;
+    var multiplier = 1;
+    var result = 0;
+    var index = 0;
+    // skip leading whitespace
+    while (index < slen && s.charAt(index) <= " ") {
+        index += 1;
+    }
+    if (index === slen) {
+        return default_v; // TODO undefined
+    }
+    // check for leading sign
+    if (s.charAt(index) === "-") {
+        multiplier = -1;
+        index += 1;
+    }
+    else if (s.charAt(index) === "+") {
+        index += 1;
+    }
+    var start = index; // remember where digits start
+    // if leading digit is 0, check for hex, octal or binary notation
+    if (index >= slen) {
+        return default_v;
+    }
+    else if (s.charAt(index) === "0") {
+        index += 1;
+        if (index >= slen) {
+            return 0;
+        }
+        if (s.charAt(index) === "x" || s.charAt(index) === "X") {
+            while (true) {
+                index += 1;
+                if (index >= slen) {
+                    break;
+                }
+                if (s.charAt(index) >= "0" && s.charAt(index) <= "9") {
+                    result = result * 16 + ord(s.charAt(index)) - ord("0");
+                }
+                else if (s.charAt(index) >= "A" && s.charAt(index) <= "F") {
+                    result = result * 16 + ord(s.charAt(index)) - ord("A") + 10;
+                }
+                else if (s.charAt(index) >= "a" && s.charAt(index) <= "f") {
+                    result = result * 16 + ord(s.charAt(index)) - ord("a") + 10;
+                }
+                else {
+                    break;
+                }
+            }
+            return result * multiplier;
+        }
+        else if (s.charAt(index) === "b" || s.charAt(index) === "B") {
+            while (true) {
+                index += 1;
+                if (index >= slen) {
+                    break;
+                }
+                if (s.charAt(index) >= "0" && s.charAt(index) <= "1") {
+                    result = result * 2 + ord(s.charAt(index)) - ord("0");
+                }
+                else {
+                    break;
+                }
+            }
+            return result * multiplier;
+        }
+        else if (s.charAt(index) !== ".") {
+            while (true) {
+                if (s.charAt(index) >= "0" && s.charAt(index) <= "7") {
+                    result = result * 8 + ord(s.charAt(index)) - ord("0");
+                }
+                else {
+                    break;
+                }
+                index += 1;
+                if (index >= slen) {
+                    break;
+                }
+            }
+            return result * multiplier;
+        }
+    }
+    // read decimal integer or floating-point number
+    while (true) {
+        if (s.charAt(index) >= "0" && s.charAt(index) <= "9") {
+            result = result * 10 + ord(s.charAt(index)) - ord("0");
+        }
+        else {
+            break;
+        }
+        index += 1;
+        if (index >= slen) {
+            break;
+        }
+    }
+    // fractional part?
+    if (index < slen && s.charAt(index) === ".") {
+        while (true) {
+            index += 1;
+            if (index >= slen) {
+                break;
+            }
+            if (s.charAt(index) >= "0" && s.charAt(index) <= "9") {
+                result = result * 10 + ord(s.charAt(index)) - ord("0");
+                multiplier *= 0.1;
+            }
+            else {
+                break;
+            }
+        }
+    }
+    // if we haven't seen any digits yet, don't check
+    // for exponents or scale factors
+    if (index === start) {
+        return default_v;
+    }
+    // type of multiplier determines type of result:
+    // multiplier is a float if we've seen digits past
+    // a decimal point, otherwise it's an int or long.
+    // Up to this point result is an int or long.
+    result *= multiplier;
+    // now check for exponent or engineering scale factor.  If there
+    // is one, result will be a float.
+    if (index < slen) {
+        var scale = s.charAt(index);
+        index += 1;
+        if (scale === "e" || scale === "E") {
+            var exponent = 0;
+            multiplier = 10.0;
+            if (index < slen) {
+                if (s.charAt(index) === "+") {
+                    index += 1;
+                }
+                else if (s.charAt(index) === "-") {
+                    index += 1;
+                    multiplier = 0.1;
+                }
+            }
+            while (index < slen) {
+                if (s.charAt(index) >= "0" && s.charAt(index) <= "9") {
+                    exponent = exponent * 10 + ord(s.charAt(index)) - ord("0");
+                    index += 1;
+                }
+                else {
+                    break;
+                }
+            }
+            while (exponent > 0) {
+                exponent -= 1;
+                result *= multiplier;
+            }
+        }
+        else if (scale === "t" || scale === "T") {
+            result *= 1e12;
+        }
+        else if (scale === "g" || scale === "G") {
+            result *= 1e9;
+        }
+        else if (scale === "M") {
+            result *= 1e6;
+        }
+        else if (scale === "k" || scale === "K") {
+            result *= 1e3;
+        }
+        else if (scale === "m") {
+            result *= 1e-3;
+        }
+        else if (scale === "u" || scale === "U") {
+            result *= 1e-6;
+        }
+        else if (scale === "n" || scale === "N") {
+            result *= 1e-9;
+        }
+        else if (scale === "p" || scale === "P") {
+            result *= 1e-12;
+        }
+        else if (scale === "f" || scale === "F") {
+            result *= 1e-15;
+        }
+    }
+    // ignore any remaining chars, eg, 1kohms returns 1000
+    return result;
+}
+exports.parse_number = parse_number;
+
+
+/***/ }),
+/* 95 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var parse_1 = __webpack_require__(94);
+// argument is a string describing the source's value (see comments for details)
+// source types: dc,step,square,triangle,sin,pulse,pwl,pwl_repeating
+// returns an object with the following attributes:
+function parse_source(v) {
+    // generic parser: parse v as either <value> or <fun>(<value>,...)
+    var src = {
+        args: [],
+        dc: 0,
+        fun: "",
+        inflection_point: function (t) { return void 0; },
+        period: 0,
+        value: function (t) { return 0; },
+    };
+    // see if there's a "(" in the description
+    var index = v.indexOf("(");
+    var ch;
+    if (index >= 0) {
+        src.fun = v.slice(0, index); // function name is before the "("
+        src.args = []; // we'll push argument values onto this list
+        var end = v.indexOf(")", index);
+        if (end === -1) {
+            end = v.length;
+        }
+        index += 1; // start parsing right after "("
+        while (index < end) {
+            // figure out where next argument value starts
+            ch = v.charAt(index);
+            if (ch <= " ") {
+                index++;
+                continue;
+            }
+            // and where it ends
+            var arg_end = v.indexOf(",", index);
+            if (arg_end === -1) {
+                arg_end = end;
+            }
+            // parse and save result in our list of arg values
+            src.args.push(parse_1.parse_number(v.slice(index, arg_end), undefined));
+            index = arg_end + 1;
+        }
+    }
+    else {
+        src.fun = "dc";
+        src.args = [parse_1.parse_number(v, 0)];
+    }
+    // post-processing for constant sources
+    // dc(v)
+    if (src.fun === "dc") {
+        var v_1 = arg_value(src.args, 0, 0);
+        src.args = [v_1];
+        src.value = function (t) {
+            return v_1;
+        }; // closure
+        // post-processing for impulse sources
+        // impulse(height,width)
+    }
+    else if (src.fun === "impulse") {
+        var h = arg_value(src.args, 0, 1); // default height: 1
+        var w = Math.abs(arg_value(src.args, 2, 1e-9)); // default width: 1ns
+        src.args = [h, w]; // remember any defaulted values
+        pwl_source(src, [0, 0, w / 2, h, w, 0], false);
+        // post-processing for step sources
+        // step(v_init,v_plateau,t_delay,t_rise)
+    }
+    else if (src.fun === "step") {
+        var v1 = arg_value(src.args, 0, 0); // default init value: 0V
+        var v2 = arg_value(src.args, 1, 1); // default plateau value: 1V
+        var td = Math.max(0, arg_value(src.args, 2, 0)); // time step starts
+        var tr = Math.abs(arg_value(src.args, 3, 1e-9)); // default rise time: 1ns
+        src.args = [v1, v2, td, tr]; // remember any defaulted values
+        pwl_source(src, [td, v1, td + tr, v2], false);
+        // post-processing for square wave
+        // square(v_init,v_plateau,freq,duty_cycle)
+    }
+    else if (src.fun === "square") {
+        var v1 = arg_value(src.args, 0, 0); // default init value: 0V
+        var v2 = arg_value(src.args, 1, 1); // default plateau value: 1V
+        var freq = Math.abs(arg_value(src.args, 2, 1)); // default frequency: 1Hz
+        var duty_cycle = Math.min(100, Math.abs(arg_value(src.args, 3, 50))); // default duty cycle: 0.5
+        src.args = [v1, v2, freq, duty_cycle]; // remember any defaulted values
+        var per = freq === 0 ? Infinity : 1 / freq;
+        var t_change = 0.01 * per; // rise and fall time
+        var t_pw = .01 * duty_cycle * 0.98 * per; // fraction of cycle minus rise and fall time
+        pwl_source(src, [0, v1, t_change, v2, t_change + t_pw,
+            v2, t_change + t_pw + t_change, v1, per, v1], true);
+        // post-processing for triangle
+        // triangle(v_init,v_plateua,t_period)
+    }
+    else if (src.fun === "triangle") {
+        var v1 = arg_value(src.args, 0, 0); // default init value: 0V
+        var v2 = arg_value(src.args, 1, 1); // default plateau value: 1V
+        var freq = Math.abs(arg_value(src.args, 2, 1)); // default frequency: 1s
+        src.args = [v1, v2, freq]; // remember any defaulted values
+        var per = freq === 0 ? Infinity : 1 / freq;
+        pwl_source(src, [0, v1, per / 2, v2, per, v1], true);
+        // post-processing for pwl and pwlr sources
+        // pwl[r](t1,v1,t2,v2,...)
+    }
+    else if (src.fun === "pwl" || src.fun === "pwl_repeating") {
+        pwl_source(src, src.args, src.fun === "pwl_repeating");
+        // post-processing for pulsed sources
+        // pulse(v_init,v_plateau,t_delay,t_rise,t_fall,t_width,t_period)
+    }
+    else if (src.fun === "pulse") {
+        var v1 = arg_value(src.args, 0, 0); // default init value: 0V
+        var v2 = arg_value(src.args, 1, 1); // default plateau value: 1V
+        var td = Math.max(0, arg_value(src.args, 2, 0)); // time pulse starts
+        var tr = Math.abs(arg_value(src.args, 3, 1e-9)); // default rise time: 1ns
+        var tf = Math.abs(arg_value(src.args, 4, 1e-9)); // default rise time: 1ns
+        var pw = Math.abs(arg_value(src.args, 5, 1e9)); // default pulse width: "infinite"
+        var per = Math.abs(arg_value(src.args, 6, 1e9)); // default period: "infinite"
+        src.args = [v1, v2, td, tr, tf, pw, per];
+        var t1 = td; // time when v1 -> v2 transition starts
+        var t2 = t1 + tr; // time when v1 -> v2 transition ends
+        var t3 = t2 + pw; // time when v2 -> v1 transition starts
+        var t4 = t3 + tf; // time when v2 -> v1 transition ends
+        pwl_source(src, [t1, v1, t2, v2, t3, v2, t4, v1, per, v1], true);
+        // post-processing for sinusoidal sources
+        // sin(v_offset,v_amplitude,freq_hz,t_delay,phase_offset_degrees)
+    }
+    else if (src.fun === "sin") {
+        var voffset_1 = arg_value(src.args, 0, 0); // default offset voltage: 0V
+        var va_1 = arg_value(src.args, 1, 1); // default amplitude: -1V to 1V
+        var freq_1 = Math.abs(arg_value(src.args, 2, 1)); // default frequency: 1Hz
+        src.period = 1.0 / freq_1;
+        var td_1 = Math.max(0, arg_value(src.args, 3, 0)); // default time delay: 0sec
+        var phase_1 = arg_value(src.args, 4, 0); // default phase offset: 0 degrees
+        src.args = [voffset_1, va_1, freq_1, td_1, phase_1];
+        phase_1 /= 360.0;
+        // return value of source at time t
+        src.value = function (t) {
+            if (t < td_1) {
+                return voffset_1 + va_1 * Math.sin(2 * Math.PI * phase_1);
+            }
+            else {
+                return voffset_1 + va_1 * Math.sin(2 * Math.PI * (freq_1 * (t - td_1) + phase_1));
+            }
+        };
+        // return time of next inflection point after time t
+        src.inflection_point = function (t) {
+            if (t < td_1) {
+                return td_1;
+            }
+            else {
+                return undefined;
+            }
+        };
+    }
+    // object has all the necessary info to compute the source value and inflection points
+    src.dc = src.value(0); // DC value is value at time 0
+    return src;
+}
+exports.parse_source = parse_source;
+function pwl_source(src, tv_pairs, repeat) {
+    var nvals = tv_pairs.length;
+    if (repeat) {
+        src.period = tv_pairs[nvals - 2];
+    } // Repeat period of source
+    if (nvals % 2 === 1) {
+        npts -= 1; // make sure it's even!
+    }
+    if (nvals <= 2) {
+        // handle degenerate case
+        src.value = function (t) {
+            return nvals === 2 ? tv_pairs[1] : 0;
+        };
+        src.inflection_point = function (t) {
+            return undefined;
+        };
+    }
+    else {
+        src.value = function (t) {
+            if (repeat) {
+                // make time periodic if values are to be repeated
+                t = math_fmod(t, tv_pairs[nvals - 2]);
+            }
+            var last_t = tv_pairs[0];
+            var last_v = tv_pairs[1];
+            if (t > last_t) {
+                var next_t = void 0;
+                var next_v = void 0;
+                for (var i = 2; i < nvals; i += 2) {
+                    next_t = tv_pairs[i];
+                    next_v = tv_pairs[i + 1];
+                    if (next_t > last_t) {
+                        if (t < next_t) {
+                            return last_v + (next_v - last_v) * (t - last_t) / (next_t - last_t);
+                        }
+                    }
+                    last_t = next_t;
+                    last_v = next_v;
+                }
+            }
+            return last_v;
+        };
+        src.inflection_point = function (t) {
+            if (repeat) {
+                // make time periodic if values are to be repeated
+                t = math_fmod(t, tv_pairs[nvals - 2]);
+            }
+            for (var i = 0; i < nvals; i += 2) {
+                var next_t = tv_pairs[i];
+                if (t < next_t) {
+                    return next_t;
+                }
+            }
+            return undefined;
+        };
+    }
+}
+exports.pwl_source = pwl_source;
+/**
+ * helper function: return args[index] if present, else default_v
+ * @param args
+ * @param index
+ * @param default_v
+ */
+function arg_value(args, index, default_v) {
+    if (index < args.length) {
+        var result = args[index];
+        if (result === undefined) {
+            result = default_v;
+        }
+        return result;
+    }
+    else {
+        return default_v;
+    }
+}
+// we need fmod in the Math library!
+function math_fmod(numerator, denominator) {
+    var quotient = Math.floor(numerator / denominator);
+    return numerator - quotient * denominator;
+}
+exports.math_fmod = math_fmod;
+
+
+/***/ }),
+/* 96 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var React = __webpack_require__(7);
+var ReactDOM = __webpack_require__(110);
+var app_1 = __webpack_require__(195);
 ReactDOM.render(React.createElement(app_1.App, null), document.getElementById("sandbox"));
 
 
 /***/ }),
-/* 92 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12231,11 +13040,11 @@ ReactDOM.render(React.createElement(app_1.App, null), document.getElementById("s
 
 
 
-var PooledClass = __webpack_require__(93);
-var ReactElement = __webpack_require__(20);
+var PooledClass = __webpack_require__(98);
+var ReactElement = __webpack_require__(21);
 
 var emptyFunction = __webpack_require__(11);
-var traverseAllChildren = __webpack_require__(94);
+var traverseAllChildren = __webpack_require__(99);
 
 var twoArgumentPooler = PooledClass.twoArgumentPooler;
 var fourArgumentPooler = PooledClass.fourArgumentPooler;
@@ -12411,7 +13220,7 @@ var ReactChildren = {
 module.exports = ReactChildren;
 
 /***/ }),
-/* 93 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12426,7 +13235,7 @@ module.exports = ReactChildren;
 
 
 
-var _prodInvariant = __webpack_require__(22);
+var _prodInvariant = __webpack_require__(23);
 
 var invariant = __webpack_require__(1);
 
@@ -12527,7 +13336,7 @@ module.exports = PooledClass;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 94 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12541,14 +13350,14 @@ module.exports = PooledClass;
 
 
 
-var _prodInvariant = __webpack_require__(22);
+var _prodInvariant = __webpack_require__(23);
 
 var ReactCurrentOwner = __webpack_require__(15);
-var REACT_ELEMENT_TYPE = __webpack_require__(58);
+var REACT_ELEMENT_TYPE = __webpack_require__(59);
 
-var getIteratorFn = __webpack_require__(59);
+var getIteratorFn = __webpack_require__(60);
 var invariant = __webpack_require__(1);
-var KeyEscapeUtils = __webpack_require__(95);
+var KeyEscapeUtils = __webpack_require__(100);
 var warning = __webpack_require__(2);
 
 var SEPARATOR = '.';
@@ -12707,7 +13516,7 @@ module.exports = traverseAllChildren;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 95 */
+/* 100 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12769,7 +13578,7 @@ var KeyEscapeUtils = {
 module.exports = KeyEscapeUtils;
 
 /***/ }),
-/* 96 */
+/* 101 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12783,7 +13592,7 @@ module.exports = KeyEscapeUtils;
 
 
 
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
 /**
  * Create a factory that creates HTML tag elements.
@@ -12792,7 +13601,7 @@ var ReactElement = __webpack_require__(20);
  */
 var createDOMFactory = ReactElement.createFactory;
 if (process.env.NODE_ENV !== 'production') {
-  var ReactElementValidator = __webpack_require__(60);
+  var ReactElementValidator = __webpack_require__(61);
   createDOMFactory = ReactElementValidator.createFactory;
 }
 
@@ -12942,7 +13751,7 @@ module.exports = ReactDOMFactories;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 97 */
+/* 102 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12956,10 +13765,10 @@ module.exports = ReactDOMFactories;
 
 
 
-var _prodInvariant = __webpack_require__(22);
+var _prodInvariant = __webpack_require__(23);
 
-var ReactPropTypeLocationNames = __webpack_require__(98);
-var ReactPropTypesSecret = __webpack_require__(99);
+var ReactPropTypeLocationNames = __webpack_require__(103);
+var ReactPropTypesSecret = __webpack_require__(104);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -13033,7 +13842,7 @@ module.exports = checkReactTypeSpec;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 98 */
+/* 103 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13062,7 +13871,7 @@ module.exports = ReactPropTypeLocationNames;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 99 */
+/* 104 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13082,7 +13891,7 @@ var ReactPropTypesSecret = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
 module.exports = ReactPropTypesSecret;
 
 /***/ }),
-/* 100 */
+/* 105 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13096,15 +13905,15 @@ module.exports = ReactPropTypesSecret;
 
 
 
-var _require = __webpack_require__(20),
+var _require = __webpack_require__(21),
     isValidElement = _require.isValidElement;
 
-var factory = __webpack_require__(61);
+var factory = __webpack_require__(62);
 
 module.exports = factory(isValidElement);
 
 /***/ }),
-/* 101 */
+/* 106 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13120,7 +13929,7 @@ module.exports = factory(isValidElement);
 if (process.env.NODE_ENV !== 'production') {
   var invariant = __webpack_require__(1);
   var warning = __webpack_require__(2);
-  var ReactPropTypesSecret = __webpack_require__(39);
+  var ReactPropTypesSecret = __webpack_require__(40);
   var loggedTypeFailures = {};
 }
 
@@ -13171,7 +13980,7 @@ module.exports = checkPropTypes;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 102 */
+/* 107 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13188,7 +13997,7 @@ module.exports = checkPropTypes;
 module.exports = '15.6.2';
 
 /***/ }),
-/* 103 */
+/* 108 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13202,19 +14011,19 @@ module.exports = '15.6.2';
 
 
 
-var _require = __webpack_require__(56),
+var _require = __webpack_require__(57),
     Component = _require.Component;
 
-var _require2 = __webpack_require__(20),
+var _require2 = __webpack_require__(21),
     isValidElement = _require2.isValidElement;
 
-var ReactNoopUpdateQueue = __webpack_require__(57);
-var factory = __webpack_require__(63);
+var ReactNoopUpdateQueue = __webpack_require__(58);
+var factory = __webpack_require__(64);
 
 module.exports = factory(Component, isValidElement, ReactNoopUpdateQueue);
 
 /***/ }),
-/* 104 */
+/* 109 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13227,9 +14036,9 @@ module.exports = factory(Component, isValidElement, ReactNoopUpdateQueue);
  */
 
 
-var _prodInvariant = __webpack_require__(22);
+var _prodInvariant = __webpack_require__(23);
 
-var ReactElement = __webpack_require__(20);
+var ReactElement = __webpack_require__(21);
 
 var invariant = __webpack_require__(1);
 
@@ -13256,17 +14065,17 @@ module.exports = onlyChild;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 105 */
+/* 110 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-module.exports = __webpack_require__(106);
+module.exports = __webpack_require__(111);
 
 
 /***/ }),
-/* 106 */
+/* 111 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13282,16 +14091,16 @@ module.exports = __webpack_require__(106);
 
 
 
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactDefaultInjection = __webpack_require__(107);
-var ReactMount = __webpack_require__(88);
-var ReactReconciler = __webpack_require__(23);
-var ReactUpdates = __webpack_require__(13);
-var ReactVersion = __webpack_require__(184);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDefaultInjection = __webpack_require__(112);
+var ReactMount = __webpack_require__(89);
+var ReactReconciler = __webpack_require__(24);
+var ReactUpdates = __webpack_require__(14);
+var ReactVersion = __webpack_require__(189);
 
-var findDOMNode = __webpack_require__(185);
-var getHostComponentFromComposite = __webpack_require__(89);
-var renderSubtreeIntoContainer = __webpack_require__(186);
+var findDOMNode = __webpack_require__(190);
+var getHostComponentFromComposite = __webpack_require__(90);
+var renderSubtreeIntoContainer = __webpack_require__(191);
 var warning = __webpack_require__(2);
 
 ReactDefaultInjection.inject();
@@ -13332,7 +14141,7 @@ if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined' && typeof __REACT_DEVT
 }
 
 if (process.env.NODE_ENV !== 'production') {
-  var ExecutionEnvironment = __webpack_require__(7);
+  var ExecutionEnvironment = __webpack_require__(8);
   if (ExecutionEnvironment.canUseDOM && window.top === window.self) {
     // First check if devtools is not installed
     if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === 'undefined') {
@@ -13368,9 +14177,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 if (process.env.NODE_ENV !== 'production') {
   var ReactInstrumentation = __webpack_require__(12);
-  var ReactDOMUnknownPropertyHook = __webpack_require__(187);
-  var ReactDOMNullInputValuePropHook = __webpack_require__(188);
-  var ReactDOMInvalidARIAHook = __webpack_require__(189);
+  var ReactDOMUnknownPropertyHook = __webpack_require__(192);
+  var ReactDOMNullInputValuePropHook = __webpack_require__(193);
+  var ReactDOMInvalidARIAHook = __webpack_require__(194);
 
   ReactInstrumentation.debugTool.addHook(ReactDOMUnknownPropertyHook);
   ReactInstrumentation.debugTool.addHook(ReactDOMNullInputValuePropHook);
@@ -13381,7 +14190,7 @@ module.exports = ReactDOM;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 107 */
+/* 112 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13395,25 +14204,25 @@ module.exports = ReactDOM;
 
 
 
-var ARIADOMPropertyConfig = __webpack_require__(108);
-var BeforeInputEventPlugin = __webpack_require__(109);
-var ChangeEventPlugin = __webpack_require__(113);
-var DefaultEventPluginOrder = __webpack_require__(121);
-var EnterLeaveEventPlugin = __webpack_require__(122);
-var HTMLDOMPropertyConfig = __webpack_require__(123);
-var ReactComponentBrowserEnvironment = __webpack_require__(124);
-var ReactDOMComponent = __webpack_require__(130);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactDOMEmptyComponent = __webpack_require__(155);
-var ReactDOMTreeTraversal = __webpack_require__(156);
-var ReactDOMTextComponent = __webpack_require__(157);
-var ReactDefaultBatchingStrategy = __webpack_require__(158);
-var ReactEventListener = __webpack_require__(159);
-var ReactInjection = __webpack_require__(161);
-var ReactReconcileTransaction = __webpack_require__(162);
-var SVGDOMPropertyConfig = __webpack_require__(168);
-var SelectEventPlugin = __webpack_require__(169);
-var SimpleEventPlugin = __webpack_require__(170);
+var ARIADOMPropertyConfig = __webpack_require__(113);
+var BeforeInputEventPlugin = __webpack_require__(114);
+var ChangeEventPlugin = __webpack_require__(118);
+var DefaultEventPluginOrder = __webpack_require__(126);
+var EnterLeaveEventPlugin = __webpack_require__(127);
+var HTMLDOMPropertyConfig = __webpack_require__(128);
+var ReactComponentBrowserEnvironment = __webpack_require__(129);
+var ReactDOMComponent = __webpack_require__(135);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMEmptyComponent = __webpack_require__(160);
+var ReactDOMTreeTraversal = __webpack_require__(161);
+var ReactDOMTextComponent = __webpack_require__(162);
+var ReactDefaultBatchingStrategy = __webpack_require__(163);
+var ReactEventListener = __webpack_require__(164);
+var ReactInjection = __webpack_require__(166);
+var ReactReconcileTransaction = __webpack_require__(167);
+var SVGDOMPropertyConfig = __webpack_require__(173);
+var SelectEventPlugin = __webpack_require__(174);
+var SimpleEventPlugin = __webpack_require__(175);
 
 var alreadyInjected = false;
 
@@ -13470,7 +14279,7 @@ module.exports = {
 };
 
 /***/ }),
-/* 108 */
+/* 113 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13547,7 +14356,7 @@ var ARIADOMPropertyConfig = {
 module.exports = ARIADOMPropertyConfig;
 
 /***/ }),
-/* 109 */
+/* 114 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13561,11 +14370,11 @@ module.exports = ARIADOMPropertyConfig;
 
 
 
-var EventPropagators = __webpack_require__(27);
-var ExecutionEnvironment = __webpack_require__(7);
-var FallbackCompositionState = __webpack_require__(110);
-var SyntheticCompositionEvent = __webpack_require__(111);
-var SyntheticInputEvent = __webpack_require__(112);
+var EventPropagators = __webpack_require__(28);
+var ExecutionEnvironment = __webpack_require__(8);
+var FallbackCompositionState = __webpack_require__(115);
+var SyntheticCompositionEvent = __webpack_require__(116);
+var SyntheticInputEvent = __webpack_require__(117);
 
 var END_KEYCODES = [9, 13, 27, 32]; // Tab, Return, Esc, Space
 var START_KEYCODE = 229;
@@ -13934,7 +14743,7 @@ var BeforeInputEventPlugin = {
 module.exports = BeforeInputEventPlugin;
 
 /***/ }),
-/* 110 */
+/* 115 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13948,11 +14757,11 @@ module.exports = BeforeInputEventPlugin;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var PooledClass = __webpack_require__(21);
+var PooledClass = __webpack_require__(22);
 
-var getTextContentAccessor = __webpack_require__(67);
+var getTextContentAccessor = __webpack_require__(68);
 
 /**
  * This helper class stores information about text content of a target node,
@@ -14032,7 +14841,7 @@ PooledClass.addPoolingTo(FallbackCompositionState);
 module.exports = FallbackCompositionState;
 
 /***/ }),
-/* 111 */
+/* 116 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14071,7 +14880,7 @@ SyntheticEvent.augmentClass(SyntheticCompositionEvent, CompositionEventInterface
 module.exports = SyntheticCompositionEvent;
 
 /***/ }),
-/* 112 */
+/* 117 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14111,7 +14920,7 @@ SyntheticEvent.augmentClass(SyntheticInputEvent, InputEventInterface);
 module.exports = SyntheticInputEvent;
 
 /***/ }),
-/* 113 */
+/* 118 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14125,17 +14934,17 @@ module.exports = SyntheticInputEvent;
 
 
 
-var EventPluginHub = __webpack_require__(28);
-var EventPropagators = __webpack_require__(27);
-var ExecutionEnvironment = __webpack_require__(7);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactUpdates = __webpack_require__(13);
+var EventPluginHub = __webpack_require__(29);
+var EventPropagators = __webpack_require__(28);
+var ExecutionEnvironment = __webpack_require__(8);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactUpdates = __webpack_require__(14);
 var SyntheticEvent = __webpack_require__(17);
 
-var inputValueTracking = __webpack_require__(70);
-var getEventTarget = __webpack_require__(42);
-var isEventSupported = __webpack_require__(43);
-var isTextInputElement = __webpack_require__(71);
+var inputValueTracking = __webpack_require__(71);
+var getEventTarget = __webpack_require__(43);
+var isEventSupported = __webpack_require__(44);
+var isTextInputElement = __webpack_require__(72);
 
 var eventTypes = {
   change: {
@@ -14426,7 +15235,7 @@ var ChangeEventPlugin = {
 module.exports = ChangeEventPlugin;
 
 /***/ }),
-/* 114 */
+/* 119 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14441,7 +15250,7 @@ module.exports = ChangeEventPlugin;
 
 
 
-var ReactOwner = __webpack_require__(115);
+var ReactOwner = __webpack_require__(120);
 
 var ReactRef = {};
 
@@ -14518,7 +15327,7 @@ ReactRef.detachRefs = function (instance, element) {
 module.exports = ReactRef;
 
 /***/ }),
-/* 115 */
+/* 120 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14615,7 +15424,7 @@ module.exports = ReactOwner;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 116 */
+/* 121 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14630,12 +15439,12 @@ module.exports = ReactOwner;
 
 
 
-var ReactInvalidSetStateWarningHook = __webpack_require__(117);
-var ReactHostOperationHistoryHook = __webpack_require__(118);
+var ReactInvalidSetStateWarningHook = __webpack_require__(122);
+var ReactHostOperationHistoryHook = __webpack_require__(123);
 var ReactComponentTreeHook = __webpack_require__(10);
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
-var performanceNow = __webpack_require__(119);
+var performanceNow = __webpack_require__(124);
 var warning = __webpack_require__(2);
 
 var hooks = [];
@@ -14980,7 +15789,7 @@ module.exports = ReactDebugTool;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 117 */
+/* 122 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15021,7 +15830,7 @@ module.exports = ReactInvalidSetStateWarningHook;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 118 */
+/* 123 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15058,7 +15867,7 @@ var ReactHostOperationHistoryHook = {
 module.exports = ReactHostOperationHistoryHook;
 
 /***/ }),
-/* 119 */
+/* 124 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15073,7 +15882,7 @@ module.exports = ReactHostOperationHistoryHook;
  * @typechecks
  */
 
-var performance = __webpack_require__(120);
+var performance = __webpack_require__(125);
 
 var performanceNow;
 
@@ -15095,7 +15904,7 @@ if (performance.now) {
 module.exports = performanceNow;
 
 /***/ }),
-/* 120 */
+/* 125 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15110,7 +15919,7 @@ module.exports = performanceNow;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
 var performance;
 
@@ -15121,7 +15930,7 @@ if (ExecutionEnvironment.canUseDOM) {
 module.exports = performance || {};
 
 /***/ }),
-/* 121 */
+/* 126 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15150,7 +15959,7 @@ var DefaultEventPluginOrder = ['ResponderEventPlugin', 'SimpleEventPlugin', 'Tap
 module.exports = DefaultEventPluginOrder;
 
 /***/ }),
-/* 122 */
+/* 127 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15164,9 +15973,9 @@ module.exports = DefaultEventPluginOrder;
 
 
 
-var EventPropagators = __webpack_require__(27);
-var ReactDOMComponentTree = __webpack_require__(5);
-var SyntheticMouseEvent = __webpack_require__(33);
+var EventPropagators = __webpack_require__(28);
+var ReactDOMComponentTree = __webpack_require__(6);
+var SyntheticMouseEvent = __webpack_require__(34);
 
 var eventTypes = {
   mouseEnter: {
@@ -15251,7 +16060,7 @@ var EnterLeaveEventPlugin = {
 module.exports = EnterLeaveEventPlugin;
 
 /***/ }),
-/* 123 */
+/* 128 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15491,7 +16300,7 @@ var HTMLDOMPropertyConfig = {
 module.exports = HTMLDOMPropertyConfig;
 
 /***/ }),
-/* 124 */
+/* 129 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15505,8 +16314,8 @@ module.exports = HTMLDOMPropertyConfig;
 
 
 
-var DOMChildrenOperations = __webpack_require__(45);
-var ReactDOMIDOperations = __webpack_require__(129);
+var DOMChildrenOperations = __webpack_require__(46);
+var ReactDOMIDOperations = __webpack_require__(134);
 
 /**
  * Abstracts away all functionality of the reconciler that requires knowledge of
@@ -15522,7 +16331,7 @@ var ReactComponentBrowserEnvironment = {
 module.exports = ReactComponentBrowserEnvironment;
 
 /***/ }),
-/* 125 */
+/* 130 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15538,10 +16347,10 @@ module.exports = ReactComponentBrowserEnvironment;
 
 var _prodInvariant = __webpack_require__(3);
 
-var DOMLazyTree = __webpack_require__(24);
-var ExecutionEnvironment = __webpack_require__(7);
+var DOMLazyTree = __webpack_require__(25);
+var ExecutionEnvironment = __webpack_require__(8);
 
-var createNodesFromMarkup = __webpack_require__(126);
+var createNodesFromMarkup = __webpack_require__(131);
 var emptyFunction = __webpack_require__(11);
 var invariant = __webpack_require__(1);
 
@@ -15572,7 +16381,7 @@ module.exports = Danger;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 126 */
+/* 131 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15589,10 +16398,10 @@ module.exports = Danger;
 
 /*eslint-disable fb-www/unsafe-html*/
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
-var createArrayFromMixed = __webpack_require__(127);
-var getMarkupWrap = __webpack_require__(128);
+var createArrayFromMixed = __webpack_require__(132);
+var getMarkupWrap = __webpack_require__(133);
 var invariant = __webpack_require__(1);
 
 /**
@@ -15660,7 +16469,7 @@ module.exports = createNodesFromMarkup;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 127 */
+/* 132 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15791,7 +16600,7 @@ module.exports = createArrayFromMixed;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 128 */
+/* 133 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15807,7 +16616,7 @@ module.exports = createArrayFromMixed;
 
 /*eslint-disable fb-www/unsafe-html */
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
 var invariant = __webpack_require__(1);
 
@@ -15890,7 +16699,7 @@ module.exports = getMarkupWrap;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 129 */
+/* 134 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15904,8 +16713,8 @@ module.exports = getMarkupWrap;
 
 
 
-var DOMChildrenOperations = __webpack_require__(45);
-var ReactDOMComponentTree = __webpack_require__(5);
+var DOMChildrenOperations = __webpack_require__(46);
+var ReactDOMComponentTree = __webpack_require__(6);
 
 /**
  * Operations used to process updates to DOM nodes.
@@ -15926,7 +16735,7 @@ var ReactDOMIDOperations = {
 module.exports = ReactDOMIDOperations;
 
 /***/ }),
-/* 130 */
+/* 135 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15943,34 +16752,34 @@ module.exports = ReactDOMIDOperations;
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var AutoFocusUtils = __webpack_require__(131);
-var CSSPropertyOperations = __webpack_require__(132);
-var DOMLazyTree = __webpack_require__(24);
-var DOMNamespaces = __webpack_require__(46);
+var AutoFocusUtils = __webpack_require__(136);
+var CSSPropertyOperations = __webpack_require__(137);
+var DOMLazyTree = __webpack_require__(25);
+var DOMNamespaces = __webpack_require__(47);
 var DOMProperty = __webpack_require__(18);
-var DOMPropertyOperations = __webpack_require__(76);
-var EventPluginHub = __webpack_require__(28);
-var EventPluginRegistry = __webpack_require__(31);
-var ReactBrowserEventEmitter = __webpack_require__(36);
-var ReactDOMComponentFlags = __webpack_require__(64);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactDOMInput = __webpack_require__(142);
-var ReactDOMOption = __webpack_require__(143);
-var ReactDOMSelect = __webpack_require__(78);
-var ReactDOMTextarea = __webpack_require__(144);
+var DOMPropertyOperations = __webpack_require__(77);
+var EventPluginHub = __webpack_require__(29);
+var EventPluginRegistry = __webpack_require__(32);
+var ReactBrowserEventEmitter = __webpack_require__(37);
+var ReactDOMComponentFlags = __webpack_require__(65);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMInput = __webpack_require__(147);
+var ReactDOMOption = __webpack_require__(148);
+var ReactDOMSelect = __webpack_require__(79);
+var ReactDOMTextarea = __webpack_require__(149);
 var ReactInstrumentation = __webpack_require__(12);
-var ReactMultiChild = __webpack_require__(79);
-var ReactServerRenderingTransaction = __webpack_require__(153);
+var ReactMultiChild = __webpack_require__(80);
+var ReactServerRenderingTransaction = __webpack_require__(158);
 
 var emptyFunction = __webpack_require__(11);
-var escapeTextContentForBrowser = __webpack_require__(35);
+var escapeTextContentForBrowser = __webpack_require__(36);
 var invariant = __webpack_require__(1);
-var isEventSupported = __webpack_require__(43);
-var shallowEqual = __webpack_require__(50);
-var inputValueTracking = __webpack_require__(70);
-var validateDOMNesting = __webpack_require__(54);
+var isEventSupported = __webpack_require__(44);
+var shallowEqual = __webpack_require__(51);
+var inputValueTracking = __webpack_require__(71);
+var validateDOMNesting = __webpack_require__(55);
 var warning = __webpack_require__(2);
 
 var Flags = ReactDOMComponentFlags;
@@ -16944,7 +17753,7 @@ module.exports = ReactDOMComponent;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 131 */
+/* 136 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16958,9 +17767,9 @@ module.exports = ReactDOMComponent;
 
 
 
-var ReactDOMComponentTree = __webpack_require__(5);
+var ReactDOMComponentTree = __webpack_require__(6);
 
-var focusNode = __webpack_require__(74);
+var focusNode = __webpack_require__(75);
 
 var AutoFocusUtils = {
   focusDOMComponent: function () {
@@ -16971,7 +17780,7 @@ var AutoFocusUtils = {
 module.exports = AutoFocusUtils;
 
 /***/ }),
-/* 132 */
+/* 137 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16985,14 +17794,14 @@ module.exports = AutoFocusUtils;
 
 
 
-var CSSProperty = __webpack_require__(75);
-var ExecutionEnvironment = __webpack_require__(7);
+var CSSProperty = __webpack_require__(76);
+var ExecutionEnvironment = __webpack_require__(8);
 var ReactInstrumentation = __webpack_require__(12);
 
-var camelizeStyleName = __webpack_require__(133);
-var dangerousStyleValue = __webpack_require__(135);
-var hyphenateStyleName = __webpack_require__(136);
-var memoizeStringOnly = __webpack_require__(138);
+var camelizeStyleName = __webpack_require__(138);
+var dangerousStyleValue = __webpack_require__(140);
+var hyphenateStyleName = __webpack_require__(141);
+var memoizeStringOnly = __webpack_require__(143);
 var warning = __webpack_require__(2);
 
 var processStyleName = memoizeStringOnly(function (styleName) {
@@ -17190,7 +17999,7 @@ module.exports = CSSPropertyOperations;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 133 */
+/* 138 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17205,7 +18014,7 @@ module.exports = CSSPropertyOperations;
 
 
 
-var camelize = __webpack_require__(134);
+var camelize = __webpack_require__(139);
 
 var msPattern = /^-ms-/;
 
@@ -17233,7 +18042,7 @@ function camelizeStyleName(string) {
 module.exports = camelizeStyleName;
 
 /***/ }),
-/* 134 */
+/* 139 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17268,7 +18077,7 @@ function camelize(string) {
 module.exports = camelize;
 
 /***/ }),
-/* 135 */
+/* 140 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17282,7 +18091,7 @@ module.exports = camelize;
 
 
 
-var CSSProperty = __webpack_require__(75);
+var CSSProperty = __webpack_require__(76);
 var warning = __webpack_require__(2);
 
 var isUnitlessNumber = CSSProperty.isUnitlessNumber;
@@ -17351,7 +18160,7 @@ module.exports = dangerousStyleValue;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 136 */
+/* 141 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17366,7 +18175,7 @@ module.exports = dangerousStyleValue;
 
 
 
-var hyphenate = __webpack_require__(137);
+var hyphenate = __webpack_require__(142);
 
 var msPattern = /^ms-/;
 
@@ -17393,7 +18202,7 @@ function hyphenateStyleName(string) {
 module.exports = hyphenateStyleName;
 
 /***/ }),
-/* 137 */
+/* 142 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17429,7 +18238,7 @@ function hyphenate(string) {
 module.exports = hyphenate;
 
 /***/ }),
-/* 138 */
+/* 143 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17462,7 +18271,7 @@ function memoizeStringOnly(callback) {
 module.exports = memoizeStringOnly;
 
 /***/ }),
-/* 139 */
+/* 144 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17476,7 +18285,7 @@ module.exports = memoizeStringOnly;
 
 
 
-var escapeTextContentForBrowser = __webpack_require__(35);
+var escapeTextContentForBrowser = __webpack_require__(36);
 
 /**
  * Escapes attribute value to prevent scripting attacks.
@@ -17491,7 +18300,7 @@ function quoteAttributeValueForBrowser(value) {
 module.exports = quoteAttributeValueForBrowser;
 
 /***/ }),
-/* 140 */
+/* 145 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17505,7 +18314,7 @@ module.exports = quoteAttributeValueForBrowser;
 
 
 
-var EventPluginHub = __webpack_require__(28);
+var EventPluginHub = __webpack_require__(29);
 
 function runEventQueueInBatch(events) {
   EventPluginHub.enqueueEvents(events);
@@ -17526,7 +18335,7 @@ var ReactEventEmitterMixin = {
 module.exports = ReactEventEmitterMixin;
 
 /***/ }),
-/* 141 */
+/* 146 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17540,7 +18349,7 @@ module.exports = ReactEventEmitterMixin;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
 /**
  * Generate a mapping of standard vendor prefixes using the defined style property and event name.
@@ -17630,7 +18439,7 @@ function getVendorPrefixedEventName(eventName) {
 module.exports = getVendorPrefixedEventName;
 
 /***/ }),
-/* 142 */
+/* 147 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17645,12 +18454,12 @@ module.exports = getVendorPrefixedEventName;
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var DOMPropertyOperations = __webpack_require__(76);
-var LinkedValueUtils = __webpack_require__(48);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactUpdates = __webpack_require__(13);
+var DOMPropertyOperations = __webpack_require__(77);
+var LinkedValueUtils = __webpack_require__(49);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactUpdates = __webpack_require__(14);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -17921,7 +18730,7 @@ module.exports = ReactDOMInput;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 143 */
+/* 148 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17935,11 +18744,11 @@ module.exports = ReactDOMInput;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var React = __webpack_require__(19);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactDOMSelect = __webpack_require__(78);
+var React = __webpack_require__(20);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMSelect = __webpack_require__(79);
 
 var warning = __webpack_require__(2);
 var didWarnInvalidOptionChildren = false;
@@ -18047,7 +18856,7 @@ module.exports = ReactDOMOption;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 144 */
+/* 149 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18062,11 +18871,11 @@ module.exports = ReactDOMOption;
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var LinkedValueUtils = __webpack_require__(48);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactUpdates = __webpack_require__(13);
+var LinkedValueUtils = __webpack_require__(49);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactUpdates = __webpack_require__(14);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -18211,7 +19020,7 @@ module.exports = ReactDOMTextarea;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 145 */
+/* 150 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18225,12 +19034,12 @@ module.exports = ReactDOMTextarea;
 
 
 
-var ReactReconciler = __webpack_require__(23);
+var ReactReconciler = __webpack_require__(24);
 
-var instantiateReactComponent = __webpack_require__(80);
-var KeyEscapeUtils = __webpack_require__(52);
-var shouldUpdateReactComponent = __webpack_require__(51);
-var traverseAllChildren = __webpack_require__(84);
+var instantiateReactComponent = __webpack_require__(81);
+var KeyEscapeUtils = __webpack_require__(53);
+var shouldUpdateReactComponent = __webpack_require__(52);
+var traverseAllChildren = __webpack_require__(85);
 var warning = __webpack_require__(2);
 
 var ReactComponentTreeHook;
@@ -18368,7 +19177,7 @@ module.exports = ReactChildReconciler;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 146 */
+/* 151 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -18383,25 +19192,25 @@ module.exports = ReactChildReconciler;
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var React = __webpack_require__(19);
-var ReactComponentEnvironment = __webpack_require__(49);
+var React = __webpack_require__(20);
+var ReactComponentEnvironment = __webpack_require__(50);
 var ReactCurrentOwner = __webpack_require__(15);
-var ReactErrorUtils = __webpack_require__(41);
-var ReactInstanceMap = __webpack_require__(25);
+var ReactErrorUtils = __webpack_require__(42);
+var ReactInstanceMap = __webpack_require__(26);
 var ReactInstrumentation = __webpack_require__(12);
-var ReactNodeTypes = __webpack_require__(81);
-var ReactReconciler = __webpack_require__(23);
+var ReactNodeTypes = __webpack_require__(82);
+var ReactReconciler = __webpack_require__(24);
 
 if (process.env.NODE_ENV !== 'production') {
-  var checkReactTypeSpec = __webpack_require__(147);
+  var checkReactTypeSpec = __webpack_require__(152);
 }
 
-var emptyObject = __webpack_require__(26);
+var emptyObject = __webpack_require__(27);
 var invariant = __webpack_require__(1);
-var shallowEqual = __webpack_require__(50);
-var shouldUpdateReactComponent = __webpack_require__(51);
+var shallowEqual = __webpack_require__(51);
+var shouldUpdateReactComponent = __webpack_require__(52);
 var warning = __webpack_require__(2);
 
 var CompositeTypes = {
@@ -19272,7 +20081,7 @@ module.exports = ReactCompositeComponent;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 147 */
+/* 152 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19288,8 +20097,8 @@ module.exports = ReactCompositeComponent;
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactPropTypeLocationNames = __webpack_require__(148);
-var ReactPropTypesSecret = __webpack_require__(77);
+var ReactPropTypeLocationNames = __webpack_require__(153);
+var ReactPropTypesSecret = __webpack_require__(78);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -19363,7 +20172,7 @@ module.exports = checkReactTypeSpec;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 148 */
+/* 153 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19392,7 +20201,7 @@ module.exports = ReactPropTypeLocationNames;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 149 */
+/* 154 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19416,7 +20225,7 @@ function getNextDebugID() {
 module.exports = getNextDebugID;
 
 /***/ }),
-/* 150 */
+/* 155 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19439,7 +20248,7 @@ var REACT_ELEMENT_TYPE = typeof Symbol === 'function' && Symbol['for'] && Symbol
 module.exports = REACT_ELEMENT_TYPE;
 
 /***/ }),
-/* 151 */
+/* 156 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19483,7 +20292,7 @@ function getIteratorFn(maybeIterable) {
 module.exports = getIteratorFn;
 
 /***/ }),
-/* 152 */
+/* 157 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19498,8 +20307,8 @@ module.exports = getIteratorFn;
 
 
 
-var KeyEscapeUtils = __webpack_require__(52);
-var traverseAllChildren = __webpack_require__(84);
+var KeyEscapeUtils = __webpack_require__(53);
+var traverseAllChildren = __webpack_require__(85);
 var warning = __webpack_require__(2);
 
 var ReactComponentTreeHook;
@@ -19563,7 +20372,7 @@ module.exports = flattenChildren;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 153 */
+/* 158 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19577,12 +20386,12 @@ module.exports = flattenChildren;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var PooledClass = __webpack_require__(21);
-var Transaction = __webpack_require__(32);
+var PooledClass = __webpack_require__(22);
+var Transaction = __webpack_require__(33);
 var ReactInstrumentation = __webpack_require__(12);
-var ReactServerUpdateQueue = __webpack_require__(154);
+var ReactServerUpdateQueue = __webpack_require__(159);
 
 /**
  * Executed within the scope of the `Transaction` instance. Consider these as
@@ -19657,7 +20466,7 @@ module.exports = ReactServerRenderingTransaction;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 154 */
+/* 159 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19674,7 +20483,7 @@ module.exports = ReactServerRenderingTransaction;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var ReactUpdateQueue = __webpack_require__(53);
+var ReactUpdateQueue = __webpack_require__(54);
 
 var warning = __webpack_require__(2);
 
@@ -19800,7 +20609,7 @@ module.exports = ReactServerUpdateQueue;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 155 */
+/* 160 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19814,10 +20623,10 @@ module.exports = ReactServerUpdateQueue;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var DOMLazyTree = __webpack_require__(24);
-var ReactDOMComponentTree = __webpack_require__(5);
+var DOMLazyTree = __webpack_require__(25);
+var ReactDOMComponentTree = __webpack_require__(6);
 
 var ReactDOMEmptyComponent = function (instantiate) {
   // ReactCompositeComponent uses this:
@@ -19863,7 +20672,7 @@ _assign(ReactDOMEmptyComponent.prototype, {
 module.exports = ReactDOMEmptyComponent;
 
 /***/ }),
-/* 156 */
+/* 161 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20003,7 +20812,7 @@ module.exports = {
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 157 */
+/* 162 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20018,15 +20827,15 @@ module.exports = {
 
 
 var _prodInvariant = __webpack_require__(3),
-    _assign = __webpack_require__(4);
+    _assign = __webpack_require__(5);
 
-var DOMChildrenOperations = __webpack_require__(45);
-var DOMLazyTree = __webpack_require__(24);
-var ReactDOMComponentTree = __webpack_require__(5);
+var DOMChildrenOperations = __webpack_require__(46);
+var DOMLazyTree = __webpack_require__(25);
+var ReactDOMComponentTree = __webpack_require__(6);
 
-var escapeTextContentForBrowser = __webpack_require__(35);
+var escapeTextContentForBrowser = __webpack_require__(36);
 var invariant = __webpack_require__(1);
-var validateDOMNesting = __webpack_require__(54);
+var validateDOMNesting = __webpack_require__(55);
 
 /**
  * Text nodes violate a couple assumptions that React makes about components:
@@ -20169,7 +20978,7 @@ module.exports = ReactDOMTextComponent;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 158 */
+/* 163 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20183,10 +20992,10 @@ module.exports = ReactDOMTextComponent;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var ReactUpdates = __webpack_require__(13);
-var Transaction = __webpack_require__(32);
+var ReactUpdates = __webpack_require__(14);
+var Transaction = __webpack_require__(33);
 
 var emptyFunction = __webpack_require__(11);
 
@@ -20240,7 +21049,7 @@ var ReactDefaultBatchingStrategy = {
 module.exports = ReactDefaultBatchingStrategy;
 
 /***/ }),
-/* 159 */
+/* 164 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20254,16 +21063,16 @@ module.exports = ReactDefaultBatchingStrategy;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var EventListener = __webpack_require__(85);
-var ExecutionEnvironment = __webpack_require__(7);
-var PooledClass = __webpack_require__(21);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactUpdates = __webpack_require__(13);
+var EventListener = __webpack_require__(86);
+var ExecutionEnvironment = __webpack_require__(8);
+var PooledClass = __webpack_require__(22);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactUpdates = __webpack_require__(14);
 
-var getEventTarget = __webpack_require__(42);
-var getUnboundedScrollPosition = __webpack_require__(160);
+var getEventTarget = __webpack_require__(43);
+var getUnboundedScrollPosition = __webpack_require__(165);
 
 /**
  * Find the deepest React component completely containing the root of the
@@ -20398,7 +21207,7 @@ var ReactEventListener = {
 module.exports = ReactEventListener;
 
 /***/ }),
-/* 160 */
+/* 165 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20440,7 +21249,7 @@ function getUnboundedScrollPosition(scrollable) {
 module.exports = getUnboundedScrollPosition;
 
 /***/ }),
-/* 161 */
+/* 166 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20455,13 +21264,13 @@ module.exports = getUnboundedScrollPosition;
 
 
 var DOMProperty = __webpack_require__(18);
-var EventPluginHub = __webpack_require__(28);
-var EventPluginUtils = __webpack_require__(40);
-var ReactComponentEnvironment = __webpack_require__(49);
-var ReactEmptyComponent = __webpack_require__(82);
-var ReactBrowserEventEmitter = __webpack_require__(36);
-var ReactHostComponent = __webpack_require__(83);
-var ReactUpdates = __webpack_require__(13);
+var EventPluginHub = __webpack_require__(29);
+var EventPluginUtils = __webpack_require__(41);
+var ReactComponentEnvironment = __webpack_require__(50);
+var ReactEmptyComponent = __webpack_require__(83);
+var ReactBrowserEventEmitter = __webpack_require__(37);
+var ReactHostComponent = __webpack_require__(84);
+var ReactUpdates = __webpack_require__(14);
 
 var ReactInjection = {
   Component: ReactComponentEnvironment.injection,
@@ -20477,7 +21286,7 @@ var ReactInjection = {
 module.exports = ReactInjection;
 
 /***/ }),
-/* 162 */
+/* 167 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20491,15 +21300,15 @@ module.exports = ReactInjection;
 
 
 
-var _assign = __webpack_require__(4);
+var _assign = __webpack_require__(5);
 
-var CallbackQueue = __webpack_require__(68);
-var PooledClass = __webpack_require__(21);
-var ReactBrowserEventEmitter = __webpack_require__(36);
-var ReactInputSelection = __webpack_require__(86);
+var CallbackQueue = __webpack_require__(69);
+var PooledClass = __webpack_require__(22);
+var ReactBrowserEventEmitter = __webpack_require__(37);
+var ReactInputSelection = __webpack_require__(87);
 var ReactInstrumentation = __webpack_require__(12);
-var Transaction = __webpack_require__(32);
-var ReactUpdateQueue = __webpack_require__(53);
+var Transaction = __webpack_require__(33);
+var ReactUpdateQueue = __webpack_require__(54);
 
 /**
  * Ensures that, when possible, the selection range (currently selected text
@@ -20659,7 +21468,7 @@ module.exports = ReactReconcileTransaction;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 163 */
+/* 168 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20673,10 +21482,10 @@ module.exports = ReactReconcileTransaction;
 
 
 
-var ExecutionEnvironment = __webpack_require__(7);
+var ExecutionEnvironment = __webpack_require__(8);
 
-var getNodeForCharacterOffset = __webpack_require__(164);
-var getTextContentAccessor = __webpack_require__(67);
+var getNodeForCharacterOffset = __webpack_require__(169);
+var getTextContentAccessor = __webpack_require__(68);
 
 /**
  * While `isCollapsed` is available on the Selection object and `collapsed`
@@ -20874,7 +21683,7 @@ var ReactDOMSelection = {
 module.exports = ReactDOMSelection;
 
 /***/ }),
-/* 164 */
+/* 169 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20951,7 +21760,7 @@ function getNodeForCharacterOffset(root, offset) {
 module.exports = getNodeForCharacterOffset;
 
 /***/ }),
-/* 165 */
+/* 170 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20966,7 +21775,7 @@ module.exports = getNodeForCharacterOffset;
  * 
  */
 
-var isTextNode = __webpack_require__(166);
+var isTextNode = __webpack_require__(171);
 
 /*eslint-disable no-bitwise */
 
@@ -20994,7 +21803,7 @@ function containsNode(outerNode, innerNode) {
 module.exports = containsNode;
 
 /***/ }),
-/* 166 */
+/* 171 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21009,7 +21818,7 @@ module.exports = containsNode;
  * @typechecks
  */
 
-var isNode = __webpack_require__(167);
+var isNode = __webpack_require__(172);
 
 /**
  * @param {*} object The object to check.
@@ -21022,7 +21831,7 @@ function isTextNode(object) {
 module.exports = isTextNode;
 
 /***/ }),
-/* 167 */
+/* 172 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21050,7 +21859,7 @@ function isNode(object) {
 module.exports = isNode;
 
 /***/ }),
-/* 168 */
+/* 173 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21355,7 +22164,7 @@ Object.keys(ATTRS).forEach(function (key) {
 module.exports = SVGDOMPropertyConfig;
 
 /***/ }),
-/* 169 */
+/* 174 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21369,15 +22178,15 @@ module.exports = SVGDOMPropertyConfig;
 
 
 
-var EventPropagators = __webpack_require__(27);
-var ExecutionEnvironment = __webpack_require__(7);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactInputSelection = __webpack_require__(86);
+var EventPropagators = __webpack_require__(28);
+var ExecutionEnvironment = __webpack_require__(8);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactInputSelection = __webpack_require__(87);
 var SyntheticEvent = __webpack_require__(17);
 
-var getActiveElement = __webpack_require__(87);
-var isTextInputElement = __webpack_require__(71);
-var shallowEqual = __webpack_require__(50);
+var getActiveElement = __webpack_require__(88);
+var isTextInputElement = __webpack_require__(72);
+var shallowEqual = __webpack_require__(51);
 
 var skipSelectionChangeEvent = ExecutionEnvironment.canUseDOM && 'documentMode' in document && document.documentMode <= 11;
 
@@ -21546,7 +22355,7 @@ var SelectEventPlugin = {
 module.exports = SelectEventPlugin;
 
 /***/ }),
-/* 170 */
+/* 175 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21563,23 +22372,23 @@ module.exports = SelectEventPlugin;
 
 var _prodInvariant = __webpack_require__(3);
 
-var EventListener = __webpack_require__(85);
-var EventPropagators = __webpack_require__(27);
-var ReactDOMComponentTree = __webpack_require__(5);
-var SyntheticAnimationEvent = __webpack_require__(171);
-var SyntheticClipboardEvent = __webpack_require__(172);
+var EventListener = __webpack_require__(86);
+var EventPropagators = __webpack_require__(28);
+var ReactDOMComponentTree = __webpack_require__(6);
+var SyntheticAnimationEvent = __webpack_require__(176);
+var SyntheticClipboardEvent = __webpack_require__(177);
 var SyntheticEvent = __webpack_require__(17);
-var SyntheticFocusEvent = __webpack_require__(173);
-var SyntheticKeyboardEvent = __webpack_require__(174);
-var SyntheticMouseEvent = __webpack_require__(33);
-var SyntheticDragEvent = __webpack_require__(176);
-var SyntheticTouchEvent = __webpack_require__(177);
-var SyntheticTransitionEvent = __webpack_require__(178);
-var SyntheticUIEvent = __webpack_require__(29);
-var SyntheticWheelEvent = __webpack_require__(179);
+var SyntheticFocusEvent = __webpack_require__(178);
+var SyntheticKeyboardEvent = __webpack_require__(179);
+var SyntheticMouseEvent = __webpack_require__(34);
+var SyntheticDragEvent = __webpack_require__(181);
+var SyntheticTouchEvent = __webpack_require__(182);
+var SyntheticTransitionEvent = __webpack_require__(183);
+var SyntheticUIEvent = __webpack_require__(30);
+var SyntheticWheelEvent = __webpack_require__(184);
 
 var emptyFunction = __webpack_require__(11);
-var getEventCharCode = __webpack_require__(55);
+var getEventCharCode = __webpack_require__(56);
 var invariant = __webpack_require__(1);
 
 /**
@@ -21776,7 +22585,7 @@ module.exports = SimpleEventPlugin;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 171 */
+/* 176 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21818,7 +22627,7 @@ SyntheticEvent.augmentClass(SyntheticAnimationEvent, AnimationEventInterface);
 module.exports = SyntheticAnimationEvent;
 
 /***/ }),
-/* 172 */
+/* 177 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21859,7 +22668,7 @@ SyntheticEvent.augmentClass(SyntheticClipboardEvent, ClipboardEventInterface);
 module.exports = SyntheticClipboardEvent;
 
 /***/ }),
-/* 173 */
+/* 178 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21873,7 +22682,7 @@ module.exports = SyntheticClipboardEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(29);
+var SyntheticUIEvent = __webpack_require__(30);
 
 /**
  * @interface FocusEvent
@@ -21898,7 +22707,7 @@ SyntheticUIEvent.augmentClass(SyntheticFocusEvent, FocusEventInterface);
 module.exports = SyntheticFocusEvent;
 
 /***/ }),
-/* 174 */
+/* 179 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21912,11 +22721,11 @@ module.exports = SyntheticFocusEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(29);
+var SyntheticUIEvent = __webpack_require__(30);
 
-var getEventCharCode = __webpack_require__(55);
-var getEventKey = __webpack_require__(175);
-var getEventModifierState = __webpack_require__(44);
+var getEventCharCode = __webpack_require__(56);
+var getEventKey = __webpack_require__(180);
+var getEventModifierState = __webpack_require__(45);
 
 /**
  * @interface KeyboardEvent
@@ -21985,7 +22794,7 @@ SyntheticUIEvent.augmentClass(SyntheticKeyboardEvent, KeyboardEventInterface);
 module.exports = SyntheticKeyboardEvent;
 
 /***/ }),
-/* 175 */
+/* 180 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21999,7 +22808,7 @@ module.exports = SyntheticKeyboardEvent;
 
 
 
-var getEventCharCode = __webpack_require__(55);
+var getEventCharCode = __webpack_require__(56);
 
 /**
  * Normalization of deprecated HTML5 `key` values
@@ -22100,7 +22909,7 @@ function getEventKey(nativeEvent) {
 module.exports = getEventKey;
 
 /***/ }),
-/* 176 */
+/* 181 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22114,7 +22923,7 @@ module.exports = getEventKey;
 
 
 
-var SyntheticMouseEvent = __webpack_require__(33);
+var SyntheticMouseEvent = __webpack_require__(34);
 
 /**
  * @interface DragEvent
@@ -22139,7 +22948,7 @@ SyntheticMouseEvent.augmentClass(SyntheticDragEvent, DragEventInterface);
 module.exports = SyntheticDragEvent;
 
 /***/ }),
-/* 177 */
+/* 182 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22153,9 +22962,9 @@ module.exports = SyntheticDragEvent;
 
 
 
-var SyntheticUIEvent = __webpack_require__(29);
+var SyntheticUIEvent = __webpack_require__(30);
 
-var getEventModifierState = __webpack_require__(44);
+var getEventModifierState = __webpack_require__(45);
 
 /**
  * @interface TouchEvent
@@ -22187,7 +22996,7 @@ SyntheticUIEvent.augmentClass(SyntheticTouchEvent, TouchEventInterface);
 module.exports = SyntheticTouchEvent;
 
 /***/ }),
-/* 178 */
+/* 183 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22229,7 +23038,7 @@ SyntheticEvent.augmentClass(SyntheticTransitionEvent, TransitionEventInterface);
 module.exports = SyntheticTransitionEvent;
 
 /***/ }),
-/* 179 */
+/* 184 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22243,7 +23052,7 @@ module.exports = SyntheticTransitionEvent;
 
 
 
-var SyntheticMouseEvent = __webpack_require__(33);
+var SyntheticMouseEvent = __webpack_require__(34);
 
 /**
  * @interface WheelEvent
@@ -22283,7 +23092,7 @@ SyntheticMouseEvent.augmentClass(SyntheticWheelEvent, WheelEventInterface);
 module.exports = SyntheticWheelEvent;
 
 /***/ }),
-/* 180 */
+/* 185 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22297,7 +23106,7 @@ module.exports = SyntheticWheelEvent;
 
 
 
-var validateDOMNesting = __webpack_require__(54);
+var validateDOMNesting = __webpack_require__(55);
 
 var DOC_NODE_TYPE = 9;
 
@@ -22320,7 +23129,7 @@ module.exports = ReactDOMContainerInfo;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 181 */
+/* 186 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22342,7 +23151,7 @@ var ReactDOMFeatureFlags = {
 module.exports = ReactDOMFeatureFlags;
 
 /***/ }),
-/* 182 */
+/* 187 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22356,7 +23165,7 @@ module.exports = ReactDOMFeatureFlags;
 
 
 
-var adler32 = __webpack_require__(183);
+var adler32 = __webpack_require__(188);
 
 var TAG_END = /\/?>/;
 var COMMENT_START = /^<\!\-\-/;
@@ -22395,7 +23204,7 @@ var ReactMarkupChecksum = {
 module.exports = ReactMarkupChecksum;
 
 /***/ }),
-/* 183 */
+/* 188 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22442,7 +23251,7 @@ function adler32(data) {
 module.exports = adler32;
 
 /***/ }),
-/* 184 */
+/* 189 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22459,7 +23268,7 @@ module.exports = adler32;
 module.exports = '15.6.2';
 
 /***/ }),
-/* 185 */
+/* 190 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22476,10 +23285,10 @@ module.exports = '15.6.2';
 var _prodInvariant = __webpack_require__(3);
 
 var ReactCurrentOwner = __webpack_require__(15);
-var ReactDOMComponentTree = __webpack_require__(5);
-var ReactInstanceMap = __webpack_require__(25);
+var ReactDOMComponentTree = __webpack_require__(6);
+var ReactInstanceMap = __webpack_require__(26);
 
-var getHostComponentFromComposite = __webpack_require__(89);
+var getHostComponentFromComposite = __webpack_require__(90);
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
 
@@ -22523,7 +23332,7 @@ module.exports = findDOMNode;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 186 */
+/* 191 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22537,12 +23346,12 @@ module.exports = findDOMNode;
 
 
 
-var ReactMount = __webpack_require__(88);
+var ReactMount = __webpack_require__(89);
 
 module.exports = ReactMount.renderSubtreeIntoContainer;
 
 /***/ }),
-/* 187 */
+/* 192 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22557,7 +23366,7 @@ module.exports = ReactMount.renderSubtreeIntoContainer;
 
 
 var DOMProperty = __webpack_require__(18);
-var EventPluginRegistry = __webpack_require__(31);
+var EventPluginRegistry = __webpack_require__(32);
 var ReactComponentTreeHook = __webpack_require__(10);
 
 var warning = __webpack_require__(2);
@@ -22658,7 +23467,7 @@ module.exports = ReactDOMUnknownPropertyHook;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 188 */
+/* 193 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22705,7 +23514,7 @@ module.exports = ReactDOMNullInputValuePropHook;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 189 */
+/* 194 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -22802,36 +23611,45 @@ module.exports = ReactDOMInvalidARIAHook;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 190 */
+/* 195 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var grid_1 = __webpack_require__(196);
-var icon_1 = __webpack_require__(90);
-var const_1 = __webpack_require__(37);
-var element_1 = __webpack_require__(197);
-var buttonComponent_1 = __webpack_require__(198);
-var capacitor_1 = __webpack_require__(199);
-var diode_1 = __webpack_require__(200);
-var ground_1 = __webpack_require__(201);
-var inductor_1 = __webpack_require__(202);
-var nfet_1 = __webpack_require__(203);
-var opamp_1 = __webpack_require__(204);
-var pfet_1 = __webpack_require__(205);
-var probe_1 = __webpack_require__(206);
-var resistor_1 = __webpack_require__(207);
-var select_1 = __webpack_require__(208);
-var sline_1 = __webpack_require__(209);
-var card_1 = __webpack_require__(210);
+var grid_1 = __webpack_require__(201);
+var icon_1 = __webpack_require__(91);
+var const_1 = __webpack_require__(38);
+var element_1 = __webpack_require__(202);
+var circuit_1 = __webpack_require__(203);
+var buttonComponent_1 = __webpack_require__(213);
+var capacitor_1 = __webpack_require__(214);
+var card_1 = __webpack_require__(215);
+var diode_1 = __webpack_require__(216);
+var ground_1 = __webpack_require__(217);
+var inductor_1 = __webpack_require__(218);
+var nfet_1 = __webpack_require__(219);
+var opamp_1 = __webpack_require__(220);
+var pfet_1 = __webpack_require__(221);
+var probe_1 = __webpack_require__(222);
+var resistor_1 = __webpack_require__(223);
+var select_1 = __webpack_require__(224);
+var sline_1 = __webpack_require__(225);
+var helper_1 = __webpack_require__(13);
 var App = /** @class */ (function (_super) {
     tslib_1.__extends(App, _super);
     function App(props) {
         var _this = _super.call(this, props) || this;
+        _this.ac_npts = "50";
+        _this.ac_fstart = "10";
+        _this.ac_fstop = "1G";
+        _this.ac_source_name = undefined;
+        _this.tran_npts = "100";
+        _this.tran_tstop = "0.01";
+        _this.dc_max_iters = "1000";
         _this.state = {
             commentDown: "",
             cards: [],
@@ -22842,10 +23660,12 @@ var App = /** @class */ (function (_super) {
             shiftX: 0,
             shiftY: 0,
             stroke: const_1.DEFAULT_GRID_STROKE,
+            dcLabels: [],
         };
         return _this;
     }
     App.prototype.render = function () {
+        var _this = this;
         return (React.createElement("div", { className: "noselect" },
             React.createElement("div", null, this.renederCards()),
             React.createElement("table", { className: "shematic-table" },
@@ -22873,7 +23693,7 @@ var App = /** @class */ (function (_super) {
                                 React.createElement(icon_1.Icon, { name: "delete_forever" })),
                             React.createElement("div", { onClick: this.onRotateClick.bind(this) },
                                 React.createElement(icon_1.Icon, { name: "rotate_right" })),
-                            React.createElement("div", { onClick: undefined }, "DC"),
+                            React.createElement("div", { onClick: this.dcAnalysis.bind(this) }, "DC"),
                             React.createElement("div", { onClick: undefined }, "AC"),
                             React.createElement("div", { onClick: undefined, className: "shematic-top-btntran" }, "TRAN"))),
                     React.createElement("tr", null,
@@ -22903,13 +23723,16 @@ var App = /** @class */ (function (_super) {
                                 React.createElement(react_konva_1.Stage, { width: 800, height: 456 },
                                     this.renderElements(),
                                     this.state.line ?
-                                        React.createElement(sline_1.SLine, { x: this.state.line.x + this.state.shiftX, y: this.state.line.y + this.state.shiftY, endX: this.state.line.endX, endY: this.state.line.endY, onConnectorMouseDown: function () { }, scale: this.state.scale })
+                                        React.createElement(sline_1.SLine, { x: this.state.line.x + this.state.shiftX, y: this.state.line.y + this.state.shiftY, endX: this.state.line.endX + this.state.shiftX, endY: this.state.line.endY + this.state.shiftY, onConnectorMouseDown: function () { }, scale: this.state.scale })
                                         :
                                             null,
                                     this.state.selectRect ?
                                         React.createElement(select_1.Select, { x: this.state.selectRect.x, y: this.state.selectRect.y, width: this.state.selectRect.width, height: this.state.selectRect.height })
                                         :
-                                            null))),
+                                            null,
+                                    React.createElement(react_konva_1.Layer, null, this.state.dcLabels.map(function (item) {
+                                        return React.createElement(react_konva_1.Text, { text: item.text + "V", x: (item.x - 10 + _this.state.shiftX) * _this.state.scale, y: (item.y - 10 + _this.state.shiftY) * _this.state.scale, fontSize: 20 * _this.state.scale, stroke: "red", fill: "white" });
+                                    }))))),
                         React.createElement("td", { className: "shematic-menu-right" },
                             React.createElement("div", { className: "shematic-button-component" },
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: opamp_1.OpAmp, app: this, scale: 0.8, x: 0, y: 18, comment: "OpAmp", name: "opamp" }),
@@ -22941,7 +23764,7 @@ var App = /** @class */ (function (_super) {
     App.prototype.createCard = function () {
         var _this = this;
         var index = this.state.cards.length;
-        this.state.cards.push(React.createElement(card_1.Card, { x: 150, y: 150, onCloseClick: function () { ArrayRemove(_this.state.cards, index); console.log("попал"); _this.setState({}); } }));
+        this.state.cards.push(React.createElement(card_1.Card, { x: 150, y: 150, onCloseClick: function () { ArrayRemove(_this.state.cards, index); _this.setState({}); } }));
         this.setState({});
     };
     App.prototype.renderElements = function () {
@@ -22997,10 +23820,10 @@ var App = /** @class */ (function (_super) {
             var bundle = element.component.bundle;
             var x = (e.nativeEvent.offsetX / _this.state.scale - _this.state.shiftX);
             var y = (e.nativeEvent.offsetY / _this.state.scale - _this.state.shiftY);
-            var yb = bundle.y;
-            var yhb = bundle.y + bundle.height;
-            var xb = bundle.x;
-            var xwb = bundle.x + bundle.width;
+            var yb = bundle.y - _this.state.shiftY;
+            var yhb = bundle.y - _this.state.shiftY + bundle.height;
+            var xb = bundle.x - _this.state.shiftX;
+            var xwb = bundle.x - _this.state.shiftX + bundle.width;
             var temp;
             if (yb > yhb) {
                 temp = yb;
@@ -23164,6 +23987,12 @@ var App = /** @class */ (function (_super) {
                 if (element.rotation === 360) {
                     element.rotation = 0;
                 }
+                element.component.getPoints().forEach(function (conection) {
+                    var temp = helper_1.RotatePoint(conection.x, conection.y, element.rotation);
+                    conection.x = temp.x;
+                    conection.y = temp.y;
+                    console.log(conection.x, conection.y);
+                });
             }
         });
         this.setState({});
@@ -23209,12 +24038,11 @@ var App = /** @class */ (function (_super) {
     App.prototype.onConnectorMouseDown = function (e, layerX, layerY) {
         e.evt.stopPropagation();
         this.unselectAll();
-        console.log("Mouse Down", layerX, layerY);
         this.setState({
             selectRect: undefined,
             line: {
-                x: layerX,
-                y: layerY,
+                x: layerX - this.state.shiftX,
+                y: layerY - this.state.shiftY,
                 endX: layerX,
                 endY: layerY,
             },
@@ -23250,6 +24078,75 @@ var App = /** @class */ (function (_super) {
         });
         this.setState({});
     };
+    App.prototype.json = function (elements) {
+        var json = [];
+        // output all the components/wires in the diagram
+        var n = elements.length;
+        var index = 0;
+        elements.forEach(function (element) {
+            var temp = element.component.json(element.component.type === "w" ? index : index++);
+            json.push(temp);
+        });
+        // capture the current view parameters
+        json.push(["view", this.state.shiftX, this.state.shiftY, this.state.scale,
+            this.ac_npts, this.ac_fstart, this.ac_fstop,
+            this.ac_source_name, this.tran_npts, this.tran_tstop,
+            this.dc_max_iters]);
+        return json;
+    };
+    App.prototype.dcAnalysis = function () {
+        var _this = this;
+        // remove any previous annotations
+        this.unselectAll();
+        var ckt = this.extractCircuit();
+        if (ckt === null) {
+            return;
+        }
+        // run the analysis
+        var operating_point = ckt.dc();
+        console.log(operating_point);
+        if (operating_point !== undefined) {
+            // save a copy of the results for submission
+            var dc_results = {};
+            this.state.dcLabels = [];
+            var _loop_1 = function (i) {
+                dc_results[i] = operating_point[i];
+                this_1.state.elements.filter(function (item) { return item.component.type !== "w"; }).some(function (item) {
+                    return item.component.getPoints().some(function (point) {
+                        if (point.label == i) {
+                            _this.state.dcLabels.push({ text: operating_point[i].toString(), x: point.x, y: point.y });
+                            return true;
+                        }
+                        return false;
+                    });
+                });
+            };
+            var this_1 = this;
+            for (var i in operating_point) {
+                _loop_1(i);
+            }
+            // display results on diagram
+            // this.redraw();
+            this.setState({});
+        }
+    };
+    App.prototype.extractCircuit = function () {
+        // give all the circuit nodes a name, extract netlist
+        helper_1.prepare(this.state.elements);
+        var netlist = this.json(this.state.elements);
+        console.log(netlist);
+        // // since we've done the heavy lifting, update input field value
+        // // so user can grab diagram if they want
+        // this.input.value = JSON.stringify(netlist);
+        // create a circuit from the netlist
+        var ckt = new circuit_1.Circuit();
+        if (ckt.load_netlist(netlist)) {
+            return ckt;
+        }
+        else {
+            return null;
+        }
+    };
     return App;
 }(React.Component));
 exports.App = App;
@@ -23261,7 +24158,7 @@ function ArrayRemove(array, from, to) {
 
 
 /***/ }),
-/* 191 */
+/* 196 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {/*
@@ -41482,10 +42379,10 @@ function ArrayRemove(array, from, to) {
   Konva.Collection.mapMethods(Konva.Arrow);
 })(Konva);
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(192)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(197)))
 
 /***/ }),
-/* 192 */
+/* 197 */
 /***/ (function(module, exports) {
 
 var g;
@@ -41512,7 +42409,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 193 */
+/* 198 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process) {/**
@@ -41537,17 +42434,17 @@ if (process.env.NODE_ENV !== 'production') {
   // By explicitly using `prop-types` you are opting into new development behavior.
   // http://fb.me/prop-types-in-prod
   var throwOnDirectAccess = true;
-  module.exports = __webpack_require__(62)(isValidElement, throwOnDirectAccess);
+  module.exports = __webpack_require__(63)(isValidElement, throwOnDirectAccess);
 } else {
   // By explicitly using `prop-types` you are opting into new production behavior.
   // http://fb.me/prop-types-in-prod
-  module.exports = __webpack_require__(194)();
+  module.exports = __webpack_require__(199)();
 }
 
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 194 */
+/* 199 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -41562,7 +42459,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 var emptyFunction = __webpack_require__(11);
 var invariant = __webpack_require__(1);
-var ReactPropTypesSecret = __webpack_require__(39);
+var ReactPropTypesSecret = __webpack_require__(40);
 
 module.exports = function() {
   function shim(props, propName, componentName, location, propFullName, secret) {
@@ -41612,7 +42509,7 @@ module.exports = function() {
 
 
 /***/ }),
-/* 195 */
+/* 200 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -41626,8 +42523,8 @@ module.exports = function() {
 
 
 
-var React = __webpack_require__(6);
-var factory = __webpack_require__(63);
+var React = __webpack_require__(7);
+var factory = __webpack_require__(64);
 
 if (typeof React === 'undefined') {
   throw Error(
@@ -41647,16 +42544,16 @@ module.exports = factory(
 
 
 /***/ }),
-/* 196 */
+/* 201 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var const_1 = __webpack_require__(37);
+var const_1 = __webpack_require__(38);
 var Grid = /** @class */ (function (_super) {
     tslib_1.__extends(Grid, _super);
     function Grid(props) {
@@ -41689,7 +42586,7 @@ exports.Grid = Grid;
 
 
 /***/ }),
-/* 197 */
+/* 202 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -41706,16 +42603,1724 @@ exports.Element = Element;
 
 
 /***/ }),
-/* 198 */
+/* 203 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var const_1 = __webpack_require__(92);
+var en_US_1 = __webpack_require__(93);
+var mat_1 = __webpack_require__(204);
+var parse_1 = __webpack_require__(94);
+var capacitor_1 = __webpack_require__(205);
+var diod_1 = __webpack_require__(206);
+var fet_1 = __webpack_require__(207);
+var inductor_1 = __webpack_require__(208);
+var isource_1 = __webpack_require__(209);
+var opamp_1 = __webpack_require__(210);
+var resistor_1 = __webpack_require__(211);
+var vsource_1 = __webpack_require__(212);
+var Circuit = /** @class */ (function () {
+    function Circuit() {
+        this.node_map = {};
+        this.ntypes = [];
+        this.initial_conditions = [];
+        this.devices = [];
+        this.device_map = {};
+        this.voltage_sources = [];
+        this.current_sources = [];
+        this.finalized = false;
+        this.diddc = false;
+        this.node_index = -1;
+        this.periods = 1;
+        this.parse_number = parse_1.parse_number;
+    }
+    /**
+     * index of ground node
+     */
+    Circuit.prototype.gnd_node = function () {
+        return -1;
+    };
+    /**
+     * allocate a new node index
+     * @param name
+     * @param ntype
+     * @param ic
+     */
+    Circuit.prototype.node = function (name, ntype, ic) {
+        this.node_index += 1;
+        if (name) {
+            this.node_map[name] = this.node_index;
+        }
+        this.ntypes.push(ntype);
+        this.initial_conditions.push(ic);
+        return this.node_index;
+    };
+    /**
+     * call to finalize the circuit in preparation for simulation
+     */
+    Circuit.prototype.finalize = function () {
+        if (!this.finalized) {
+            this.finalized = true;
+            this.N = this.node_index + 1; // number of nodes
+            // give each device a chance to finalize itself
+            for (var i = this.devices.length - 1; i >= 0; --i) {
+                this.devices[i].finalize();
+            }
+            //#region set up augumented matrix and various temp vectors
+            this.matrix = mat_1.mat_make(this.N, this.N + 1);
+            this.Gl = mat_1.mat_make(this.N, this.N); // Matrix for linear conductances
+            this.G = mat_1.mat_make(this.N, this.N); // Complete conductance matrix
+            this.C = mat_1.mat_make(this.N, this.N); // Matrix for linear L's and C's
+            this.soln_max = new Array(this.N); // max abs value seen for each unknown
+            this.abstol = new Array(this.N);
+            this.solution = new Array(this.N);
+            this.rhs = new Array(this.N);
+            for (var i = this.N - 1; i >= 0; --i) {
+                this.soln_max[i] = 0.0;
+                this.abstol[i] = this.ntypes[i] === const_1.T_VOLTAGE ? const_1.v_abstol : const_1.i_abstol;
+                this.solution[i] = 0.0;
+                this.rhs[i] = 0.0;
+            }
+            //#endregion
+            // Load up the linear elements once and for all
+            for (var i = this.devices.length - 1; i >= 0; --i) {
+                this.devices[i].load_linear(this);
+            }
+            // Check for voltage source loops.
+            var n_vsrc = this.voltage_sources.length;
+            if (n_vsrc > 0) {
+                var GV = mat_1.mat_make(n_vsrc, this.N); // Loop check
+                for (var i = n_vsrc - 1; i >= 0; --i) {
+                    var branch = this.voltage_sources[i].branch;
+                    for (var j = this.N - 1; j >= 0; j--) {
+                        GV[i][j] = this.Gl[branch][j];
+                    }
+                }
+                var rGV = mat_1.mat_rank(GV);
+                if (rGV < n_vsrc) {
+                    // alert('Warning!!! Circuit has a voltage source loop or a source or current probe shorted by a wire, please remove the source or the wire causing the short.');
+                    // alert('Warning!!! Simulator might produce meaningless results or no result with illegal circuits.');
+                    alert(en_US_1.i18n.ckt_alert1);
+                    alert(en_US_1.i18n.ckt_alert2);
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+    /**
+     * load circuit from JSON netlist (see schematic.js)
+     * @param netlist
+     */
+    Circuit.prototype.load_netlist = function (netlist) {
+        // set up mapping for all ground connections
+        for (var i = netlist.length - 1; i >= 0; --i) {
+            var component = netlist[i];
+            var type = component[0];
+            if (type === "g") {
+                var connections = component[3];
+                this.node_map[connections[0]] = this.gnd_node();
+            }
+        }
+        // process each component in the JSON netlist (see schematic.js for format)
+        var foundGround = false;
+        for (var i = netlist.length - 1; i >= 0; --i) {
+            var component = netlist[i];
+            var type = component[0];
+            // ignore wires, ground connections, scope probes and view info
+            if (type === "view" || type === "w" || type === "g" || type === "s" || type === "L") {
+                continue;
+            }
+            var properties = component[2];
+            var name_1 = properties["name"];
+            if (name_1 === undefined || name_1 === "") {
+                name_1 = "_" + properties["_json_"].toString();
+            }
+            // convert node names to circuit indicies
+            var connections = component[3];
+            for (var j = connections.length - 1; j >= 0; --j) {
+                var node = connections[j];
+                var index = this.node_map[node];
+                if (index === undefined) {
+                    index = this.node(node, const_1.T_VOLTAGE);
+                }
+                else if (index === this.gnd_node()) {
+                    foundGround = true;
+                }
+                connections[j] = index;
+            }
+            // process the component
+            if (type === "r") {
+                this.r(connections[0], connections[1], properties["r"], name_1);
+            }
+            else if (type === "d") {
+                this.d(connections[0], connections[1], properties["area"], properties["type"], name_1);
+            }
+            else if (type === "c") {
+                this.cc(connections[0], connections[1], properties["c"], name_1);
+            }
+            else if (type === "l") {
+                this.l(connections[0], connections[1], properties["l"], name_1);
+            }
+            else if (type === "v") {
+                this.v(connections[0], connections[1], properties["value"], name_1);
+            }
+            else if (type === "i") {
+                this.i(connections[0], connections[1], properties["value"], name_1);
+            }
+            else if (type === "o") {
+                this.opamp(connections[0], connections[1], connections[2], connections[3], properties["A"], name_1);
+            }
+            else if (type === "n") {
+                this.n(connections[0], connections[1], connections[2], properties["WL"], name_1);
+            }
+            else if (type === "p") {
+                this.p(connections[0], connections[1], connections[2], properties["WL"], name_1);
+            }
+            else if (type === "a") {
+                this.v(connections[0], connections[1], "0", name_1);
+            }
+        }
+        if (!foundGround) {
+            // alert('Please make at least one connection to ground (triangle symbol)');
+            alert(en_US_1.i18n.ckt_alert3);
+            /*	var content = document.createElement('div');
+                var strAlert = document.createTextNode(i18n.ckt_alert3);
+                content.appendChild(strAlert);
+                this.dialog(i18n.Alert,content);
+                return false;	*/
+        }
+        return true;
+    };
+    /**
+     * if converges: updates this.solution, this.soln_max, returns iter count
+     * otherwise: return undefined and set this.problem_node
+     * Load should compute -f and df/dx (note the sign pattern!)
+     * @param load
+     * @param maxiters
+     */
+    Circuit.prototype.find_solution = function (load, maxiters) {
+        var soln = this.solution;
+        var rhs = this.rhs;
+        var dSol = [];
+        var abssumCompare;
+        var converged;
+        var abssumOld = 0;
+        var abssumRhs;
+        var useLimiting = false;
+        var downCount = 0;
+        var thresh;
+        // iteratively solve until values convere or iteration limit exceeded
+        for (var iter = 0; iter < maxiters; iter++) {
+            // set up equations
+            load(this, soln, rhs);
+            // Compute norm of rhs, assume variables of v type go with eqns of i type
+            abssumRhs = 0;
+            for (var i = this.N - 1; i >= 0; --i) {
+                if (this.ntypes[i] === const_1.T_VOLTAGE) {
+                    abssumRhs += Math.abs(rhs[i]);
+                }
+            }
+            if ((iter > 0) && (useLimiting === false) && (abssumOld < abssumRhs)) {
+                // Old rhsnorm was better, undo last iter and turn on limiting
+                for (var i = this.N - 1; i >= 0; --i) {
+                    soln[i] -= dSol[i];
+                }
+                iter -= 1;
+                useLimiting = true;
+            }
+            else {
+                dSol = mat_1.mat_solve_rq(this.matrix, rhs);
+                // If norm going down for ten iters, stop limiting
+                if (abssumRhs < abssumOld) {
+                    downCount += 1;
+                }
+                else {
+                    downCount = 0;
+                }
+                if (downCount > 10) {
+                    useLimiting = false;
+                    downCount = 0;
+                }
+                // Update norm of rhs
+                abssumOld = abssumRhs;
+            }
+            // Update the worst case abssum for comparison.
+            if ((iter === 0) || (abssumRhs > abssumCompare)) {
+                abssumCompare = abssumRhs;
+            }
+            // Check residue convergence, but loosely, and give up
+            // on last iteration
+            if ((iter < (maxiters - 1)) &&
+                (abssumRhs > (const_1.res_check_abs + const_1.res_check_rel * abssumCompare))) {
+                converged = false;
+            }
+            else {
+                converged = true;
+            }
+            // Update solution and check delta convergence
+            for (var i = this.N - 1; i >= 0; --i) {
+                // Simple voltage step limiting to encourage Newton convergence
+                if (useLimiting) {
+                    if (this.ntypes[i] === const_1.T_VOLTAGE) {
+                        dSol[i] = (dSol[i] > const_1.v_newt_lim) ? const_1.v_newt_lim : dSol[i];
+                        dSol[i] = (dSol[i] < -const_1.v_newt_lim) ? -const_1.v_newt_lim : dSol[i];
+                    }
+                }
+                soln[i] += dSol[i];
+                thresh = this.abstol[i] + const_1.reltol * this.soln_max[i];
+                if (Math.abs(dSol[i]) > thresh) {
+                    converged = false;
+                    this.problem_node = i;
+                }
+            }
+            if (converged === true) {
+                for (var i = this.N - 1; i >= 0; --i) {
+                    if (Math.abs(soln[i]) > this.soln_max[i]) {
+                        this.soln_max[i] = Math.abs(soln[i]);
+                    }
+                }
+                return iter + 1;
+            }
+        }
+        return undefined;
+    };
+    /**
+     * DC analysis
+     */
+    Circuit.prototype.dc = function () {
+        // Allocation matrices for linear part, etc.
+        if (this.finalize() === false) {
+            return undefined;
+        }
+        // Define -f and df/dx for Newton solver
+        function load_dc(ckt, soln, rhs) {
+            // rhs is initialized to -Gl * soln
+            mat_1.mat_v_mult(ckt.Gl, soln, rhs, -1.0);
+            // G matrix is initialized with linear Gl
+            mat_1.mat_copy(ckt.Gl, ckt.G);
+            // Now load up the nonlinear parts of rhs and G
+            for (var i = ckt.devices.length - 1; i >= 0; --i) {
+                ckt.devices[i].load_dc(ckt, soln, rhs);
+            }
+            // G matrix is copied in to the system matrix
+            mat_1.mat_copy(ckt.G, ckt.matrix);
+        }
+        // find the operating point
+        var iterations = this.find_solution(load_dc, const_1.dc_max_iters);
+        if (typeof iterations === "undefined") {
+            // too many iterations
+            if (this.current_sources.length > 0) {
+                // alert('Newton Method Failed, do your current sources have a conductive path to ground?');
+                alert(en_US_1.i18n.ckt_alert4);
+            }
+            else {
+                // alert('Newton Method Failed, it may be your circuit or it may be our simulator.');
+                alert(en_US_1.i18n.ckt_alert5);
+            }
+            return undefined;
+        }
+        else {
+            // Note that a dc solution was computed
+            this.diddc = true;
+            // create solution dictionary
+            var result = {};
+            // capture node voltages
+            // tslint:disable-next-line:forin
+            for (var name_2 in this.node_map) {
+                var index = this.node_map[name_2];
+                result[name_2] = (index === -1) ? 0 : this.solution[index];
+            }
+            // capture branch currents from voltage sources
+            for (var i = this.voltage_sources.length - 1; i >= 0; --i) {
+                var v = this.voltage_sources[i];
+                result["I(" + v.name + ")"] = this.solution[v.branch];
+            }
+            return result;
+        }
+    };
+    /**
+     * Transient analysis (needs work!)
+     * @param ntpts
+     * @param tstart
+     * @param tstop
+     * @param probenames
+     * @param no_dc
+     */
+    Circuit.prototype.tran = function (ntpts, tstart, tstop, probenames, no_dc) {
+        /**
+         * Define -f and df/dx for Newton solver
+         * @param ckt
+         * @param soln
+         * @param rhs
+         */
+        function load_tran(ckt, soln, rhs) {
+            // Crnt is initialized to -Gl * soln
+            mat_1.mat_v_mult(ckt.Gl, soln, ckt.c, -1.0);
+            // G matrix is initialized with linear Gl
+            mat_1.mat_copy(ckt.Gl, ckt.G);
+            // Now load up the nonlinear parts of crnt and G
+            for (var i = ckt.devices.length - 1; i >= 0; --i) {
+                ckt.devices[i].load_tran(ckt, soln, ckt.c, ckt.time);
+            }
+            // Exploit the fact that storage elements are linear
+            mat_1.mat_v_mult(ckt.C, soln, ckt.q, 1.0);
+            // -rhs = c - dqdt
+            for (var i = ckt.N - 1; i >= 0; --i) {
+                var dqdt = ckt.alpha0 * ckt.q[i] + ckt.alpha1 * ckt.oldq[i] +
+                    ckt.alpha2 * ckt.old2q[i];
+                rhs[i] = ckt.beta0[i] * ckt.c[i] + ckt.beta1[i] * ckt.oldc[i] - dqdt;
+            }
+            // matrix = beta0*G + alpha0*C.
+            mat_1.mat_scale_add(ckt.G, ckt.C, ckt.beta0, ckt.alpha0, ckt.matrix);
+        }
+        var p = new Array(3);
+        function interp_coeffs(t, t0, t1, t2) {
+            // Poly coefficients
+            var dtt0 = (t - t0);
+            var dtt1 = (t - t1);
+            var dtt2 = (t - t2);
+            var dt0dt1 = (t0 - t1);
+            var dt0dt2 = (t0 - t2);
+            var dt1dt2 = (t1 - t2);
+            p[0] = (dtt1 * dtt2) / (dt0dt1 * dt0dt2);
+            p[1] = (dtt0 * dtt2) / (-dt0dt1 * dt1dt2);
+            p[2] = (dtt0 * dtt1) / (dt0dt2 * dt1dt2);
+            return p;
+        }
+        function pick_step(ckt, step_index) {
+            var min_shrink_factor = 1.0 / const_1.lte_step_decrease_factor;
+            var max_growth_factor = const_1.time_step_increase_factor;
+            var N = ckt.N;
+            var p = interp_coeffs(ckt.time, ckt.oldt, ckt.old2t, ckt.old3t);
+            var trapcoeff = 0.5 * (ckt.time - ckt.oldt) / (ckt.time - ckt.old3t);
+            var maxlteratio = 0.0;
+            for (var i = ckt.N - 1; i >= 0; --i) {
+                if (ckt.ltecheck[i]) {
+                    var pred = p[0] * ckt.oldsol[i] + p[1] * ckt.old2sol[i] + p[2] * ckt.old3sol[i];
+                    var lte = Math.abs((ckt.solution[i] - pred)) * trapcoeff;
+                    var lteratio = lte / (const_1.lterel * (ckt.abstol[i] + const_1.reltol * ckt.soln_max[i]));
+                    maxlteratio = Math.max(maxlteratio, lteratio);
+                }
+            }
+            var new_step;
+            var lte_step_ratio = 1.0 / Math.pow(maxlteratio, 1 / 3); // Cube root because trap
+            if (lte_step_ratio < 1.0) {
+                lte_step_ratio = Math.max(lte_step_ratio, min_shrink_factor);
+                new_step = (ckt.time - ckt.oldt) * 0.75 * lte_step_ratio;
+                new_step = Math.max(new_step, ckt.min_step);
+            }
+            else {
+                lte_step_ratio = Math.min(lte_step_ratio, max_growth_factor);
+                if (lte_step_ratio > 1.2) {
+                    new_step = (ckt.time - ckt.oldt) * lte_step_ratio / 1.2;
+                }
+                else {
+                    new_step = (ckt.time - ckt.oldt);
+                }
+                new_step = Math.min(new_step, ckt.max_step);
+            }
+            return new_step;
+        }
+        // Standard to do a dc analysis before transient
+        // Otherwise, do the setup also done in dc.
+        no_dc = false;
+        if ((this.diddc === false) && (no_dc === false)) {
+            if (this.dc() === undefined) {
+                // alert('DC failed, trying transient analysis from zero.');
+                alert(en_US_1.i18n.ckt_alert6);
+                this.finalized = false; // Reset the finalization.
+                if (this.finalize() === false) {
+                    return undefined;
+                }
+            }
+        }
+        else {
+            if (this.finalize() === false) {
+                return undefined;
+            }
+        }
+        // Tired of typing this, and using "with" generates hate mail.
+        var N = this.N;
+        // build array to hold list of results for each variable
+        // last entry is for timepoints.
+        var response = new Array(N + 1);
+        for (var i = N; i >= 0; --i) {
+            response[i] = [];
+        }
+        // Allocate back vectors for up to a second order method
+        this.old3sol = new Array(this.N);
+        this.old3q = new Array(this.N);
+        this.old2sol = new Array(this.N);
+        this.old2q = new Array(this.N);
+        this.oldsol = new Array(this.N);
+        this.oldq = new Array(this.N);
+        this.q = new Array(this.N);
+        this.oldc = new Array(this.N);
+        this.c = new Array(this.N);
+        this.alpha0 = 1.0;
+        this.alpha1 = 0.0;
+        this.alpha2 = 0.0;
+        this.beta0 = new Array(this.N);
+        this.beta1 = new Array(this.N);
+        // Mark a set of algebraic variable (don't miss hidden ones!).
+        this.ar = this.algebraic(this.C);
+        // Non-algebraic variables and probe variables get lte
+        this.ltecheck = new Array(this.N);
+        for (var i = N; i >= 0; --i) {
+            this.ltecheck[i] = (this.ar[i] === 0);
+        }
+        for (var name_3 in this.node_map) {
+            if (!this.node_map.hasOwnProperty(name_3)) {
+                continue;
+            }
+            var index = this.node_map[name_3];
+            for (var i = probenames.length; i >= 0; --i) {
+                if (name_3 === probenames[i]) {
+                    this.ltecheck[index] = true;
+                    break;
+                }
+            }
+        }
+        // Check for periodic sources
+        var period = tstop - tstart;
+        for (var i = this.voltage_sources.length - 1; i >= 0; --i) {
+            var per = this.voltage_sources[i].src.period;
+            if (per > 0) {
+                period = Math.min(period, per);
+            }
+        }
+        for (var i = this.current_sources.length - 1; i >= 0; --i) {
+            var per = this.current_sources[i].src.period;
+            if (per > 0) {
+                period = Math.min(period, per);
+            }
+        }
+        this.periods = Math.ceil((tstop - tstart) / period);
+        this.time = tstart;
+        // ntpts adjusted by numbers of periods in input
+        this.max_step = (tstop - tstart) / (this.periods * ntpts);
+        this.min_step = this.max_step / 1e8;
+        var new_step = this.max_step / 1e6;
+        this.oldt = this.time - new_step;
+        // Initialize old crnts, charges, and solutions.
+        load_tran(this, this.solution, this.rhs);
+        for (var i = N - 1; i >= 0; --i) {
+            this.old3sol[i] = this.solution[i];
+            this.old2sol[i] = this.solution[i];
+            this.oldsol[i] = this.solution[i];
+            this.old3q[i] = this.q[i];
+            this.old2q[i] = this.q[i];
+            this.oldq[i] = this.q[i];
+            this.oldc[i] = this.c[i];
+        }
+        var beta0;
+        var beta1;
+        // Start with two pseudo-Euler steps, maximum 50000 steps/period
+        var max_nsteps = this.periods * 50000;
+        for (var step_index = -3; step_index < max_nsteps; step_index++) {
+            // Save the just computed solution, and move back q and c.
+            for (var i = this.N - 1; i >= 0; --i) {
+                if (step_index >= 0) {
+                    response[i].push(this.solution[i]);
+                }
+                this.oldc[i] = this.c[i];
+                this.old3sol[i] = this.old2sol[i];
+                this.old2sol[i] = this.oldsol[i];
+                this.oldsol[i] = this.solution[i];
+                this.old3q[i] = this.oldq[i];
+                this.old2q[i] = this.oldq[i];
+                this.oldq[i] = this.q[i];
+            }
+            if (step_index < 0) {
+                this.old3t = this.old2t - (this.oldt - this.old2t);
+                this.old2t = this.oldt - (tstart - this.oldt);
+                this.oldt = tstart - (this.time - this.oldt);
+                this.time = tstart;
+                beta0 = 1.0;
+                beta1 = 0.0;
+            }
+            else {
+                // Save the time, and rotate time wheel
+                response[this.N].push(this.time);
+                this.old3t = this.old2t;
+                this.old2t = this.oldt;
+                this.oldt = this.time;
+                // Make sure we come smoothly in to the interval end.
+                if (this.time >= tstop) {
+                    break; // We're done.
+                }
+                else if (this.time + new_step > tstop) {
+                    this.time = tstop;
+                }
+                else if (this.time + 1.5 * new_step > tstop) {
+                    this.time += (2 / 3) * (tstop - this.time);
+                }
+                else {
+                    this.time += new_step;
+                }
+                // Use trap (average old and new crnts.
+                beta0 = 0.5;
+                beta1 = 0.5;
+            }
+            // For trap rule, turn off current avging for algebraic eqns
+            for (var i = this.N - 1; i >= 0; --i) {
+                this.beta0[i] = beta0 + this.ar[i] * beta1;
+                this.beta1[i] = (1.0 - this.ar[i]) * beta1;
+            }
+            // Loop to find NR converging timestep with okay LTE
+            while (true) {
+                // Set the timestep coefficients (alpha2 is for bdf2).
+                this.alpha0 = 1.0 / (this.time - this.oldt);
+                this.alpha1 = -this.alpha0;
+                this.alpha2 = 0;
+                // If timestep is 1/10,000th of tstop, just use BE.
+                if ((this.time - this.oldt) < 1.0e-4 * tstop) {
+                    for (var i = this.N - 1; i >= 0; --i) {
+                        this.beta0[i] = 1.0;
+                        this.beta1[i] = 0.0;
+                    }
+                }
+                // Use Newton to compute the solution.
+                var iterations = this.find_solution(load_tran, const_1.max_tran_iters);
+                // If NR succeeds and stepsize is at min, accept and newstep=maxgrowth*minstep.
+                // Else if Newton Fails, shrink step by a factor and try again
+                // Else LTE picks new step, if bigger accept current step and go on.
+                if ((iterations !== undefined) &&
+                    (step_index <= 0 || (this.time - this.oldt) < (1 + const_1.reltol) * this.min_step)) {
+                    if (step_index > 0) {
+                        new_step = const_1.time_step_increase_factor * this.min_step;
+                    }
+                    break;
+                }
+                else if (iterations === undefined) {
+                    this.time = this.oldt +
+                        (this.time - this.oldt) / const_1.nr_step_decrease_factor;
+                }
+                else {
+                    new_step = pick_step(this, step_index);
+                    if (new_step < (1.0 - const_1.reltol) * (this.time - this.oldt)) {
+                        this.time = this.oldt + new_step; // Try again
+                    }
+                    else {
+                        break; // LTE okay, new_step for next step
+                    }
+                }
+            }
+        }
+        // create solution dictionary
+        var result = {};
+        for (var name_4 in this.node_map) {
+            if (!this.node_map.hasOwnProperty(name_4)) {
+                continue;
+            }
+            var index = this.node_map[name_4];
+            result[name_4] = (index === -1) ? 0 : response[index];
+        }
+        // capture branch currents from voltage sources
+        for (var i = this.voltage_sources.length - 1; i >= 0; --i) {
+            var v = this.voltage_sources[i];
+            result["I(" + v.name + ")"] = response[v.branch];
+        }
+        result["_time_"] = response[this.N];
+        return result;
+    };
+    /**
+     * AC analysis: npts/decade for freqs in range [fstart,fstop]
+     * result['_frequencies_'] = vector of log10(sample freqs)
+     * result['xxx'] = vector of dB(response for node xxx)
+     * NOTE: Normalization removed in schematic.js, jkw.
+     * @param npts
+     * @param fstart
+     * @param fstop
+     * @param source_name
+     */
+    Circuit.prototype.ac = function (npts, fstart, fstop, source_name) {
+        if (this.dc() === undefined) {
+            return undefined;
+        }
+        var N = this.N;
+        var G = this.G;
+        var C = this.C;
+        // Complex numbers, we're going to need a bigger boat
+        var matrixac = mat_1.mat_make(2 * N, (2 * N) + 1);
+        // Get the source used for ac
+        if (this.device_map[source_name] === undefined) {
+            // alert('AC analysis refers to unknown source ' + source_name);
+            // return 'AC analysis failed, unknown source';
+            alert(en_US_1.i18n.ckt_alert7 + source_name);
+            return en_US_1.i18n.ckt_alert8;
+        }
+        this.device_map[source_name].load_ac(this, this.rhs);
+        // build array to hold list of magnitude and phases for each node
+        // last entry is for frequency values
+        var response = new Array(2 * N + 1);
+        for (var i = 2 * N; i >= 0; --i) {
+            response[i] = [];
+        }
+        // multiplicative frequency increase between freq points
+        var delta_f = Math.exp(Math.LN10 / npts);
+        var phase_offset = new Array(N);
+        for (var i = N - 1; i >= 0; --i) {
+            phase_offset[i] = 0;
+        }
+        var f = fstart;
+        fstop *= 1.0001; // capture that last freq point!
+        while (f <= fstop) {
+            var omega = 2 * Math.PI * f;
+            response[2 * N].push(f); // 2*N for magnitude and phase
+            // Find complex x+jy that sats Gx-omega*Cy=rhs; omega*Cx+Gy=0
+            // Note: solac[0:N-1]=x, solac[N:2N-1]=y
+            for (var i = N - 1; i >= 0; --i) {
+                // First the rhs, replicated for real and imaginary
+                matrixac[i][2 * N] = this.rhs[i];
+                matrixac[i + N][2 * N] = 0;
+                for (var j = N - 1; j >= 0; --j) {
+                    matrixac[i][j] = G[i][j];
+                    matrixac[i + N][j + N] = G[i][j];
+                    matrixac[i][j + N] = -omega * C[i][j];
+                    matrixac[i + N][j] = omega * C[i][j];
+                }
+            }
+            // Compute the small signal response
+            var solac = mat_1.mat_solve(matrixac);
+            // Save magnitude and phase
+            for (var i = N - 1; i >= 0; --i) {
+                var mag = Math.sqrt(solac[i] * solac[i] + solac[i + N] * solac[i + N]);
+                response[i].push(mag);
+                // Avoid wrapping phase, add or sub 180 for each jump
+                var phase = 180 * (Math.atan2(solac[i + N], solac[i]) / Math.PI);
+                var phasei = response[i + N];
+                var L = phasei.length;
+                // Look for a one-step jump greater than 90 degrees
+                if (L > 1) {
+                    var phase_jump = phase + phase_offset[i] - phasei[L - 1];
+                    if (phase_jump > 90) {
+                        phase_offset[i] -= 360;
+                    }
+                    else if (phase_jump < -90) {
+                        phase_offset[i] += 360;
+                    }
+                }
+                response[i + N].push(phase + phase_offset[i]);
+            }
+            f *= delta_f; // increment frequency
+        }
+        // create solution dictionary
+        var result = {};
+        for (var name_5 in this.node_map) {
+            if (!this.node_map.hasOwnProperty(name_5)) {
+                continue;
+            }
+            var index = this.node_map[name_5];
+            result[name_5] = (index === -1) ? 0 : response[index];
+            result[name_5 + "_phase"] = (index === -1) ? 0 : response[index + N];
+        }
+        result["_frequencies_"] = response[2 * N];
+        return result;
+    };
+    /**
+     * Returns a vector of ones and zeros, ones denote algebraic
+     * variables (rows that can be removed without changing rank(M).
+     * @param M
+     */
+    Circuit.prototype.algebraic = function (M) {
+        var Nr = M.length;
+        var Mc = mat_1.mat_make(Nr, Nr);
+        mat_1.mat_copy(M, Mc);
+        var R = mat_1.mat_rank(Mc);
+        var one_if_alg = new Array(Nr);
+        for (var row = 0; row < Nr; row++) {
+            for (var col = Nr - 1; col >= 0; --col) {
+                Mc[row][col] = 0;
+            }
+            if (mat_1.mat_rank(Mc) === R) {
+                one_if_alg[row] = 1;
+            }
+            else {
+                for (var col = Nr - 1; col >= 0; --col) {
+                    Mc[row][col] = M[row][col];
+                }
+                one_if_alg[row] = 0;
+            }
+        }
+        return one_if_alg;
+    };
+    /**
+     * Helper for adding devices to a circuit, warns on duplicate device names.
+     * @param d
+     * @param name
+     */
+    Circuit.prototype.add_device = function (d, name) {
+        // Add device to list of devices and to device map
+        this.devices.push(d);
+        d.name = name;
+        if (name) {
+            if (this.device_map[name] === undefined) {
+                this.device_map[name] = d;
+            }
+            else {
+                // alert('Warning: two circuit elements share the same name ' + name);
+                alert(en_US_1.i18n.ckt_warning1 + name);
+                this.device_map[name] = d;
+            }
+        }
+        return d;
+    };
+    Circuit.prototype.r = function (n1, n2, v, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof v === "string") {
+            v = parse_1.parse_number(v, undefined);
+        }
+        if (v === undefined) {
+            return undefined;
+        }
+        if (v !== 0) {
+            var d = new resistor_1.Resistor(n1, n2, v);
+            return this.add_device(d, name);
+        }
+        else {
+            return this.v(n1, n2, "0", name); // zero resistance == 0V voltage source
+        }
+    };
+    Circuit.prototype.d = function (n1, n2, area, type, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof area === "string") {
+            area = parse_1.parse_number(area, undefined);
+        }
+        if (!(area === 0 || area === undefined)) {
+            var d = new diod_1.Diode(n1, n2, area, type);
+            return this.add_device(d, name);
+        } // zero area diodes discarded.
+    };
+    Circuit.prototype.cc = function (n1, n2, v, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof v === "string") {
+            v = parse_1.parse_number(v, undefined);
+        }
+        if (v === undefined) {
+            return undefined;
+        }
+        var d = new capacitor_1.Capacitor(n1, n2, v);
+        return this.add_device(d, name);
+    };
+    Circuit.prototype.l = function (n1, n2, v, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof v === "string") {
+            v = parse_1.parse_number(v, undefined);
+        }
+        if (v === undefined) {
+            return undefined;
+        }
+        var branch = this.node(undefined, const_1.T_CURRENT);
+        var d = new inductor_1.Inductor(n1, n2, branch, v);
+        return this.add_device(d, name);
+    };
+    Circuit.prototype.v = function (n1, n2, v, name) {
+        var branch = this.node(undefined, const_1.T_CURRENT);
+        var d = new vsource_1.VSource(n1, n2, branch, v);
+        this.voltage_sources.push(d);
+        return this.add_device(d, name);
+    };
+    Circuit.prototype.i = function (n1, n2, v, name) {
+        var d = new isource_1.ISource(n1, n2, v);
+        this.current_sources.push(d);
+        return this.add_device(d, name);
+    };
+    Circuit.prototype.opamp = function (np, nn, no, ng, A, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof A === "string") {
+            A = parse_1.parse_number(A, undefined);
+        }
+        if (A === undefined) {
+            return undefined;
+        }
+        var branch = this.node(undefined, const_1.T_CURRENT);
+        var d = new opamp_1.Opamp(np, nn, no, ng, branch, A, name);
+        return this.add_device(d, name);
+    };
+    Circuit.prototype.n = function (d, g, s, ratio, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof ratio === "string") {
+            ratio = parse_1.parse_number(ratio, undefined);
+        }
+        if (ratio === undefined) {
+            return undefined;
+        }
+        var fet = new fet_1.Fet(d, g, s, ratio, name, "n");
+        return this.add_device(fet, name);
+    };
+    Circuit.prototype.p = function (d, g, s, ratio, name) {
+        // try to convert string value into numeric value, barf if we can't
+        if (typeof ratio === "string") {
+            ratio = parse_1.parse_number(ratio, undefined);
+        }
+        if (ratio === undefined) {
+            return undefined;
+        }
+        var fet = new fet_1.Fet(d, g, s, ratio, name, "p");
+        return this.add_device(fet, name);
+    };
+    /**
+     * add val component between two nodes to matrix M
+     * Index of -1 refers to ground node
+     * @param i
+     * @param j
+     * @param g
+     * @param M
+     */
+    Circuit.prototype.add_two_terminal = function (i, j, g, M) {
+        if (i >= 0) {
+            M[i][i] += g;
+            if (j >= 0) {
+                M[i][j] -= g;
+                M[j][i] -= g;
+                M[j][j] += g;
+            }
+        }
+        else if (j >= 0) {
+            M[j][j] += g;
+        }
+    };
+    /**
+     * add val component between two nodes to matrix M
+     * Index of -1 refers to ground node
+     * @param i
+     * @param j
+     * @param x
+     */
+    Circuit.prototype.get_two_terminal = function (i, j, x) {
+        var xi_minus_xj = 0;
+        if (i >= 0) {
+            xi_minus_xj = x[i];
+        }
+        if (j >= 0) {
+            xi_minus_xj -= x[j];
+        }
+        return xi_minus_xj;
+    };
+    Circuit.prototype.add_conductance_l = function (i, j, g) {
+        this.add_two_terminal(i, j, g, this.Gl);
+    };
+    Circuit.prototype.add_conductance = function (i, j, g) {
+        this.add_two_terminal(i, j, g, this.G);
+    };
+    Circuit.prototype.add_capacitance = function (i, j, c) {
+        this.add_two_terminal(i, j, c, this.C);
+    };
+    /**
+     * add individual conductance to Gl matrix
+     * @param i
+     * @param j
+     * @param g
+     */
+    Circuit.prototype.add_to_Gl = function (i, j, g) {
+        if (i >= 0 && j >= 0) {
+            this.Gl[i][j] += g;
+        }
+    };
+    /**
+     * add individual conductance to Gl matrix
+     * @param i
+     * @param j
+     * @param g
+     */
+    Circuit.prototype.add_to_G = function (i, j, g) {
+        if (i >= 0 && j >= 0) {
+            this.G[i][j] += g;
+        }
+    };
+    /**
+     * add individual capacitance to C matrix
+     * @param i
+     * @param j
+     * @param c
+     */
+    Circuit.prototype.add_to_C = function (i, j, c) {
+        if (i >= 0 && j >= 0) {
+            this.C[i][j] += c;
+        }
+    };
+    /**
+     * add source info to rhs
+     * @param i
+     * @param v
+     * @param rhs
+     */
+    Circuit.prototype.add_to_rhs = function (i, v, rhs) {
+        if (i >= 0) {
+            rhs[i] += v;
+        }
+    };
+    return Circuit;
+}());
+exports.Circuit = Circuit;
+
+
+/***/ }),
+/* 204 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var const_1 = __webpack_require__(92);
+var en_US_1 = __webpack_require__(93);
+///////////////////////////////////////////////////////////////////////////////
+//
+//  Generic matrix support - making, copying, factoring, rank, etc
+//  Note, Matrices are stored using nested javascript arrays.
+////////////////////////////////////////////////////////////////////////////////
+// Allocate an NxM matrix
+function mat_make(N, M) {
+    var mat = new Array(N);
+    for (var i = N - 1; i >= 0; --i) {
+        mat[i] = new Array(M);
+        for (var j = M - 1; j >= 0; --j) {
+            mat[i][j] = 0.0;
+        }
+    }
+    return mat;
+}
+exports.mat_make = mat_make;
+// Uses GE to determine rank.
+function mat_rank(Mo) {
+    var Nr = Mo.length; // Number of rows
+    var Nc = Mo[0].length; // Number of columns
+    // Make a copy to avoid overwriting
+    var M = mat_make(Nr, Nc);
+    mat_copy(Mo, M);
+    // Find matrix maximum entry
+    var max_abs_entry = 0;
+    for (var row = Nr - 1; row >= 0; --row) {
+        for (var col = Nr - 1; col >= 0; --col) {
+            if (Math.abs(M[row][col]) > max_abs_entry) {
+                max_abs_entry = Math.abs(M[row][col]);
+            }
+        }
+    }
+    // Gaussian elimination to find rank
+    var the_rank = 0;
+    var start_col = 0;
+    for (var row = 0; row < Nr; row++) {
+        // Search for first nonzero column in the remaining rows.
+        for (var col = start_col; col < Nc; col++) {
+            var max_v = Math.abs(M[row][col]);
+            var max_row = row;
+            for (var i = row + 1; i < Nr; i++) {
+                var temp = Math.abs(M[i][col]);
+                if (temp > max_v) {
+                    max_v = temp;
+                    max_row = i;
+                }
+            }
+            // if max_v non_zero, column is nonzero, eliminate in subsequent rows
+            if (Math.abs(max_v) > const_1.eps * max_abs_entry) {
+                start_col = col + 1;
+                the_rank += 1;
+                // Swap rows to get max in M[row][col]
+                var temp = M[row];
+                M[row] = M[max_row];
+                M[max_row] = temp;
+                // now eliminate this column for all subsequent rows
+                for (var i = row + 1; i < Nr; i++) {
+                    var temp_1 = M[i][col] / M[row][col]; // multiplier for current row
+                    // subtract
+                    if (temp_1 !== 0) {
+                        for (var j = col; j < Nc; j++) {
+                            M[i][j] -= M[row][j] * temp_1;
+                        }
+                    }
+                }
+                // Now move on to the next row
+                break;
+            }
+        }
+    }
+    return the_rank;
+}
+exports.mat_rank = mat_rank;
+/**
+ * Copy A -> using the bounds of A
+ * @param src
+ * @param dest
+ */
+function mat_copy(src, dest) {
+    var n = src.length;
+    var m = src[0].length;
+    if (n > dest.length || m > dest[0].length) {
+        // throw 'Rows or cols > rows or cols of dest';
+        throw en_US_1.i18n.ckt_error5;
+    }
+    for (var i = 0; i < n; i++) {
+        for (var j = 0; j < m; j++) {
+            dest[i][j] = src[i][j];
+        }
+    }
+}
+exports.mat_copy = mat_copy;
+/**
+ * Solve Mx=b and return vector x using R^TQ^T factorization.
+ * Multiplication by R^T implicit, should be null-space free soln.
+ * M should have the extra column!
+ * Almost everything is in-lined for speed, sigh.
+ * @param M
+ * @param rhs
+ */
+function mat_solve_rq(M, rhs) {
+    var scale;
+    var Nr = M.length; // Number of rows
+    var Nc = M[0].length; // Number of columns
+    // Copy the rhs in to the last column of M if one is given.
+    if (rhs != null) {
+        for (var row = Nr - 1; row >= 0; --row) {
+            M[row][Nc - 1] = rhs[row];
+        }
+    }
+    var matScale = 0; // Sets the scale for comparison to zero.
+    var maxNonzeroRow = Nr - 1; // Assumes M nonsingular.
+    for (var row = 0; row < Nr; row++) {
+        // Find largest row with largest 2-norm
+        var maxRow = row;
+        var maxsumsq = 0;
+        for (var rowp = row; rowp < Nr; rowp++) {
+            var Mr_1 = M[rowp];
+            var sumsq = 0;
+            for (var col = Nc - 2; col >= 0; --col) {
+                sumsq += Mr_1[col] * Mr_1[col];
+            }
+            if ((row === rowp) || (sumsq > maxsumsq)) {
+                maxRow = rowp;
+                maxsumsq = sumsq;
+            }
+        }
+        if (maxRow > row) {
+            var temp = M[row];
+            M[row] = M[maxRow];
+            M[maxRow] = temp;
+        }
+        // Calculate row norm, save if this is first (largest)
+        var rowNorm = Math.sqrt(maxsumsq);
+        if (row === 0) {
+            matScale = rowNorm;
+        }
+        // Check for all zero rows
+        if (rowNorm > matScale * const_1.eps) {
+            scale = 1.0 / rowNorm;
+        }
+        else {
+            maxNonzeroRow = row - 1; // Rest will be nullspace of M
+            break;
+        }
+        // Nonzero row, eliminate from rows below
+        var Mr = M[row];
+        for (var col = Nc - 1; col >= 0; --col) {
+            Mr[col] *= scale;
+        }
+        for (var rowp = row + 1; rowp < Nr; rowp++) {
+            var Mrp = M[rowp];
+            var inner = 0;
+            for (var col = Nc - 2; col >= 0; --col) {
+                inner += Mr[col] * Mrp[col];
+            }
+            for (var col = Nc - 1; col >= 0; --col) {
+                Mrp[col] -= inner * Mr[col];
+            }
+        }
+    }
+    // Last Column of M has inv(R^T)*rhs.  Scale rows of Q to get x.
+    var x = new Array(Nc - 1);
+    for (var col = Nc - 2; col >= 0; --col) {
+        x[col] = 0;
+    }
+    for (var row = maxNonzeroRow; row >= 0; --row) {
+        var Mr = M[row];
+        for (var col = Nc - 2; col >= 0; --col) {
+            x[col] += Mr[col] * Mr[Nc - 1];
+        }
+    }
+    return x;
+}
+exports.mat_solve_rq = mat_solve_rq;
+/**
+ * Form b = scale*Mx
+ * @param M
+ * @param x
+ * @param b
+ * @param scale
+ */
+function mat_v_mult(M, x, b, scale) {
+    var n = M.length;
+    var m = M[0].length;
+    if (n !== b.length || m !== x.length) {
+        // throw 'Rows of M mismatched to b or cols mismatch to x.';
+        throw en_US_1.i18n.ckt_error1;
+    }
+    for (var i = 0; i < n; i++) {
+        var temp = 0;
+        for (var j = 0; j < m; j++) {
+            temp += M[i][j] * x[j];
+        }
+        b[i] = scale * temp; // Recall the neg in the name
+    }
+}
+exports.mat_v_mult = mat_v_mult;
+/**
+ * C = scalea*A + scaleb*B, scalea, scaleb eithers numbers or arrays (row scaling)
+ * @param A
+ * @param B
+ * @param scalea
+ * @param scaleb
+ * @param C
+ */
+function mat_scale_add(A, B, scalea, scaleb, C) {
+    var n = A.length;
+    var m = A[0].length;
+    if (n > B.length || m > B[0].length) {
+        // throw 'Row or columns of A to large for B';
+        throw en_US_1.i18n.ckt_error2;
+    }
+    if (n > C.length || m > C[0].length) {
+        // throw 'Row or columns of A to large for C';
+        throw en_US_1.i18n.ckt_error3;
+    }
+    if ((typeof scalea === "number") && (typeof scaleb === "number")) {
+        for (var i = 0; i < n; i++) {
+            for (var j = 0; j < m; j++) {
+                C[i][j] = scalea * A[i][j] + scaleb * B[i][j];
+            }
+        }
+    }
+    else if ((typeof scaleb === "number") && Array.isArray(scalea)) {
+        for (var i = 0; i < n; i++) {
+            for (var j = 0; j < m; j++) {
+                C[i][j] = scalea[i] * A[i][j] + scaleb * B[i][j];
+            }
+        }
+    }
+    else if (Array.isArray(scaleb) && Array.isArray(scalea)) {
+        for (var i = 0; i < n; i++) {
+            for (var j = 0; j < m; j++) {
+                C[i][j] = scalea[i] * A[i][j] + scaleb[i] * B[i][j];
+            }
+        }
+    }
+    else {
+        // throw 'scalea and scaleb must be scalars or Arrays';
+        throw en_US_1.i18n.ckt_error4;
+    }
+}
+exports.mat_scale_add = mat_scale_add;
+/**
+ * solve Mx=b and return vector x given augmented matrix M = [A | b]
+ * Uses Gaussian elimination with partial pivoting
+ * @param M
+ * @param rhs
+ */
+function mat_solve(M, rhs) {
+    var N = M.length; // augmented matrix M has N rows, N+1 columns
+    var temp;
+    var i;
+    var j;
+    // Copy the rhs in to the last column of M if one is given.
+    if (rhs != null) {
+        for (var row = 0; row < N; row++) {
+            M[row][N] = rhs[row];
+        }
+    }
+    // gaussian elimination
+    for (var col = 0; col < N; col++) {
+        // find pivot: largest abs(v) in this column of remaining rows
+        var max_v = Math.abs(M[col][col]);
+        var max_col = col;
+        for (i = col + 1; i < N; i++) {
+            temp = Math.abs(M[i][col]);
+            if (temp > max_v) {
+                max_v = temp;
+                max_col = i;
+            }
+        }
+        // if no value found, generate a small conductance to gnd
+        // otherwise swap current row with pivot row
+        if (max_v === 0) {
+            M[col][col] = const_1.eps;
+        }
+        else {
+            temp = M[col];
+            M[col] = M[max_col];
+            M[max_col] = temp;
+        }
+        // now eliminate this column for all subsequent rows
+        for (i = col + 1; i < N; i++) {
+            temp = M[i][col] / M[col][col]; // multiplier we'll use for current row
+            if (temp !== 0) {
+                // subtract current row from row we're working on
+                // remember to process b too!
+                for (j = col; j <= N; j++) {
+                    M[i][j] -= M[col][j] * temp;
+                }
+            }
+        }
+    }
+    // matrix is now upper triangular, so solve for elements of x starting
+    // with the last row
+    var x = new Array(N);
+    for (i = N - 1; i >= 0; --i) {
+        temp = M[i][N]; // grab b[i] from augmented matrix as RHS
+        // subtract LHS term from RHS using known x values
+        for (j = N - 1; j > i; --j) {
+            temp -= M[i][j] * x[j];
+        }
+        // now compute new x value
+        x[i] = temp / M[i][i];
+    }
+    return x;
+}
+exports.mat_solve = mat_solve;
+/**
+ * Copy and transpose A -> using the bounds of A
+ * @param src
+ * @param dest
+ */
+function mat_copy_transposed(src, dest) {
+    var n = src.length;
+    var m = src[0].length;
+    if (n > dest[0].length || m > dest.length) {
+        // throw 'Rows or cols > cols or rows of dest';
+        throw en_US_1.i18n.ckt_error6;
+    }
+    for (var i = 0; i < n; i++) {
+        for (var j = 0; j < m; j++) {
+            dest[j][i] = src[i][j];
+        }
+    }
+}
+exports.mat_copy_transposed = mat_copy_transposed;
+
+
+/***/ }),
+/* 205 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var device_1 = __webpack_require__(19);
+var Capacitor = /** @class */ (function (_super) {
+    tslib_1.__extends(Capacitor, _super);
+    function Capacitor(n1, n2, v) {
+        var _this = _super.call(this) || this;
+        _this.n1 = n1;
+        _this.n2 = n2;
+        _this.value = v;
+        return _this;
+    }
+    Capacitor.prototype.load_linear = function (ckt) {
+        // MNA stamp for capacitance matrix 
+        ckt.add_capacitance(this.n1, this.n2, this.value);
+    };
+    Capacitor.prototype.load_dc = function (ckt, soln, rhs) {
+        //
+    };
+    Capacitor.prototype.load_ac = function (ckt) {
+        //
+    };
+    Capacitor.prototype.load_tran = function (ckt) {
+        //
+    };
+    return Capacitor;
+}(device_1.Device));
+exports.Capacitor = Capacitor;
+
+
+/***/ }),
+/* 206 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var device_1 = __webpack_require__(19);
+var Diode = /** @class */ (function (_super) {
+    tslib_1.__extends(Diode, _super);
+    function Diode(n1, n2, v, type) {
+        var _this = _super.call(this) || this;
+        _this.anode = n1;
+        _this.cathode = n2;
+        _this.area = v;
+        _this.type = type; // 'normal' or 'ideal'
+        _this.is = 1.0e-14;
+        _this.ais = _this.area * _this.is;
+        _this.vt = (type === "normal") ? 25.8e-3 : 0.1e-3; // 26mv or .1mv
+        _this.exp_arg_max = 50; // less than single precision max.
+        _this.exp_max = Math.exp(_this.exp_arg_max);
+        return _this;
+    }
+    Diode.prototype.load_linear = function (ckt) {
+        // Diode is not linear, has no linear piece.
+    };
+    Diode.prototype.load_dc = function (ckt, soln, rhs) {
+        var vd = ckt.get_two_terminal(this.anode, this.cathode, soln);
+        var exp_arg = vd / this.vt;
+        var temp1;
+        var temp2;
+        // Estimate exponential with a quadratic if arg too big.
+        var abs_exp_arg = Math.abs(exp_arg);
+        var d_arg = abs_exp_arg - this.exp_arg_max;
+        if (d_arg > 0) {
+            var quad = 1 + d_arg + 0.5 * d_arg * d_arg;
+            temp1 = this.exp_max * quad;
+            temp2 = this.exp_max * (1 + d_arg);
+        }
+        else {
+            temp1 = Math.exp(abs_exp_arg);
+            temp2 = temp1;
+        }
+        if (exp_arg < 0) {
+            temp1 = 1.0 / temp1;
+            temp2 = (temp1 * temp2) * temp1;
+        }
+        var id = this.ais * (temp1 - 1);
+        var gd = this.ais * (temp2 / this.vt);
+        // MNA stamp for independent current source
+        ckt.add_to_rhs(this.anode, -id, rhs); // current flows into anode
+        ckt.add_to_rhs(this.cathode, id, rhs); // and out of cathode
+        ckt.add_conductance(this.anode, this.cathode, gd);
+    };
+    Diode.prototype.load_tran = function (ckt, soln, rhs, time) {
+        this.load_dc(ckt, soln, rhs);
+    };
+    Diode.prototype.load_ac = function (ckt) {
+        //
+    };
+    return Diode;
+}(device_1.Device));
+exports.Diode = Diode;
+
+
+/***/ }),
+/* 207 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var device_1 = __webpack_require__(19);
+var Fet = /** @class */ (function (_super) {
+    tslib_1.__extends(Fet, _super);
+    function Fet(d, g, s, ratio, name, type) {
+        var _this = _super.call(this) || this;
+        _this.d = d;
+        _this.g = g;
+        _this.s = s;
+        _this.name = name;
+        _this.ratio = ratio;
+        if (type !== "n" && type !== "p") {
+            throw "fet type is not n or p";
+        }
+        _this.type_sign = (type === "n") ? 1 : -1;
+        _this.vt = 0.5;
+        _this.kp = 20e-6;
+        _this.beta = _this.kp * _this.ratio;
+        _this.lambda = 0.05;
+        return _this;
+    }
+    Fet.prototype.load_linear = function (ckt) {
+        // FET's are nonlinear, just like javascript progammers
+    };
+    Fet.prototype.load_dc = function (ckt, soln, rhs) {
+        var vds = this.type_sign * ckt.get_two_terminal(this.d, this.s, soln);
+        if (vds < 0) {
+            var temp = this.d;
+            this.d = this.s;
+            this.s = temp;
+            vds = this.type_sign * ckt.get_two_terminal(this.d, this.s, soln);
+        }
+        var vgs = this.type_sign * ckt.get_two_terminal(this.g, this.s, soln);
+        var vgst = vgs - this.vt;
+        var gmgs;
+        var ids;
+        var gds;
+        if (vgst > 0.0) {
+            if (vgst < vds) {
+                gmgs = this.beta * (1 + (this.lambda * vds)) * vgst;
+                ids = this.type_sign * 0.5 * gmgs * vgst;
+                gds = 0.5 * beta * vgst * vgst * lambda;
+            }
+            else {
+                gmgs = this.beta * (1 + this.lambda * vds);
+                ids = this.type_sign * gmgs * vds * (vgst - 0.50 * vds);
+                gds = gmgs * (vgst - vds) + this.beta * this.lambda * vds * (vgst - 0.5 * vds);
+                gmgs *= vds;
+            }
+            ckt.add_to_rhs(this.d, -ids, rhs); // current flows into the drain
+            ckt.add_to_rhs(this.s, ids, rhs); // and out the source		    
+            ckt.add_conductance(this.d, this.s, gds);
+            ckt.add_to_G(this.s, this.s, gmgs);
+            ckt.add_to_G(this.d, this.s, -gmgs);
+            ckt.add_to_G(this.d, this.g, gmgs);
+            ckt.add_to_G(this.s, this.g, -gmgs);
+        }
+    };
+    Fet.prototype.load_tran = function (ckt, soln, rhs) {
+        this.load_dc(ckt, soln, rhs);
+    };
+    Fet.prototype.load_ac = function (ckt) {
+        //
+    };
+    return Fet;
+}(device_1.Device));
+exports.Fet = Fet;
+
+
+/***/ }),
+/* 208 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var device_1 = __webpack_require__(19);
+var Inductor = /** @class */ (function (_super) {
+    tslib_1.__extends(Inductor, _super);
+    function Inductor(n1, n2, branch, v) {
+        var _this = _super.call(this) || this;
+        _this.n1 = n1;
+        _this.n2 = n2;
+        _this.branch = branch;
+        _this.value = v;
+        return _this;
+    }
+    Inductor.prototype.load_linear = function (ckt) {
+        // MNA stamp for inductor linear part
+        // L on diag of C because L di/dt = v(n1) - v(n2)
+        ckt.add_to_Gl(this.n1, this.branch, 1);
+        ckt.add_to_Gl(this.n2, this.branch, -1);
+        ckt.add_to_Gl(this.branch, this.n1, -1);
+        ckt.add_to_Gl(this.branch, this.n2, 1);
+        ckt.add_to_C(this.branch, this.branch, this.value);
+    };
+    Inductor.prototype.load_dc = function (ckt, soln, rhs) {
+        // Inductor is a short at dc, so is linear.
+    };
+    Inductor.prototype.load_ac = function (ckt) {
+        //
+    };
+    Inductor.prototype.load_tran = function (ckt) {
+        //
+    };
+    return Inductor;
+}(device_1.Device));
+exports.Inductor = Inductor;
+
+
+/***/ }),
+/* 209 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var sources_1 = __webpack_require__(95);
+var device_1 = __webpack_require__(19);
+var ISource = /** @class */ (function (_super) {
+    tslib_1.__extends(ISource, _super);
+    function ISource(npos, nneg, v) {
+        var _this = _super.call(this) || this;
+        _this.src = sources_1.parse_source(v);
+        _this.npos = npos;
+        _this.nneg = nneg;
+        return _this;
+    }
+    ISource.prototype.load_linear = function (ckt) {
+        // Current source is open when off, no linear contribution
+    };
+    // load linear system equations for dc analysis
+    ISource.prototype.load_dc = function (ckt, soln, rhs) {
+        var is = this.src.dc;
+        // MNA stamp for independent current source
+        ckt.add_to_rhs(this.npos, -is, rhs); // current flow into npos
+        ckt.add_to_rhs(this.nneg, is, rhs); // and out of nneg
+    };
+    // load linear system equations for tran analysis (just like DC)
+    ISource.prototype.load_tran = function (ckt, soln, rhs, time) {
+        var is = this.src.value(time);
+        // MNA stamp for independent current source
+        ckt.add_to_rhs(this.npos, -is, rhs); // current flow into npos
+        ckt.add_to_rhs(this.nneg, is, rhs); // and out of nneg
+    };
+    // return time of next breakpoint for the device
+    ISource.prototype.breakpoint = function (time) {
+        return this.src.inflection_point(time);
+    };
+    // small signal model: open circuit
+    ISource.prototype.load_ac = function (ckt, rhs) {
+        // MNA stamp for independent current source
+        ckt.add_to_rhs(this.npos, -1.0, rhs); // current flow into npos
+        ckt.add_to_rhs(this.nneg, 1.0, rhs); // and out of nneg
+    };
+    return ISource;
+}(device_1.Device));
+exports.ISource = ISource;
+
+
+/***/ }),
+/* 210 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var device_1 = __webpack_require__(19);
+var Opamp = /** @class */ (function (_super) {
+    tslib_1.__extends(Opamp, _super);
+    function Opamp(np, nn, no, ng, branch, A, name) {
+        var _this = _super.call(this) || this;
+        _this.np = np;
+        _this.nn = nn;
+        _this.no = no;
+        _this.ng = ng;
+        _this.branch = branch;
+        _this.gain = A;
+        _this.name = name;
+        return _this;
+    }
+    Opamp.prototype.load_linear = function (ckt) {
+        // MNA stamp for VCVS: 1/A(v(no) - v(ng)) - (v(np)-v(nn))) = 0.
+        var invA = 1.0 / this.gain;
+        ckt.add_to_Gl(this.no, this.branch, 1);
+        ckt.add_to_Gl(this.ng, this.branch, -1);
+        ckt.add_to_Gl(this.branch, this.no, invA);
+        ckt.add_to_Gl(this.branch, this.ng, -invA);
+        ckt.add_to_Gl(this.branch, this.np, -1);
+        ckt.add_to_Gl(this.branch, this.nn, 1);
+    };
+    Opamp.prototype.load_dc = function (ckt, soln, rhs) {
+        // Op-amp is linear.
+    };
+    Opamp.prototype.load_ac = function (ckt) {
+        //
+    };
+    Opamp.prototype.load_tran = function (ckt) {
+        //
+    };
+    return Opamp;
+}(device_1.Device));
+exports.Opamp = Opamp;
+
+
+/***/ }),
+/* 211 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var device_1 = __webpack_require__(19);
+var Resistor = /** @class */ (function (_super) {
+    tslib_1.__extends(Resistor, _super);
+    function Resistor(n1, n2, v) {
+        var _this = _super.call(this) || this;
+        _this.n1 = n1;
+        _this.n2 = n2;
+        _this.g = 1.0 / v;
+        return _this;
+    }
+    Resistor.prototype.load_linear = function (ckt) {
+        // MNA stamp for admittance g
+        ckt.add_conductance_l(this.n1, this.n2, this.g);
+    };
+    Resistor.prototype.load_dc = function (ckt) {
+        // Nothing to see here, move along.
+    };
+    Resistor.prototype.load_tran = function (ckt, soln) {
+        // Nothing
+    };
+    Resistor.prototype.load_ac = function (ckt) {
+        // Nothing
+    };
+    return Resistor;
+}(device_1.Device));
+exports.Resistor = Resistor;
+
+
+/***/ }),
+/* 212 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var sources_1 = __webpack_require__(95);
+var device_1 = __webpack_require__(19);
+var VSource = /** @class */ (function (_super) {
+    tslib_1.__extends(VSource, _super);
+    function VSource(npos, nneg, branch, v) {
+        var _this = _super.call(this) || this;
+        _this.src = sources_1.parse_source(v);
+        _this.npos = npos;
+        _this.nneg = nneg;
+        _this.branch = branch;
+        return _this;
+    }
+    /**
+     * load linear part for source evaluation
+     * @param ckt
+     */
+    VSource.prototype.load_linear = function (ckt) {
+        // MNA stamp for independent voltage source
+        ckt.add_to_Gl(this.branch, this.npos, 1.0);
+        ckt.add_to_Gl(this.branch, this.nneg, -1.0);
+        ckt.add_to_Gl(this.npos, this.branch, 1.0);
+        ckt.add_to_Gl(this.nneg, this.branch, -1.0);
+    };
+    /**
+     * Source voltage added to b.
+     * @param ckt
+     * @param soln
+     * @param rhs
+     */
+    VSource.prototype.load_dc = function (ckt, soln, rhs) {
+        ckt.add_to_rhs(this.branch, this.src.dc, rhs);
+    };
+    // Load time-dependent value for voltage source for tran
+    VSource.prototype.load_tran = function (ckt, soln, rhs, time) {
+        ckt.add_to_rhs(this.branch, this.src.value(time), rhs);
+    };
+    // return time of next breakpoint for the device
+    VSource.prototype.breakpoint = function (time) {
+        return this.src.inflection_point(time);
+    };
+    // small signal model ac value
+    VSource.prototype.load_ac = function (ckt, rhs) {
+        ckt.add_to_rhs(this.branch, 1.0, rhs);
+    };
+    return VSource;
+}(device_1.Device));
+exports.VSource = VSource;
+
+
+/***/ }),
+/* 213 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var const_1 = __webpack_require__(37);
+var const_1 = __webpack_require__(38);
 var ButtonComponent = /** @class */ (function (_super) {
     tslib_1.__extends(ButtonComponent, _super);
     function ButtonComponent(props) {
@@ -41734,24 +44339,36 @@ exports.ButtonComponent = ButtonComponent;
 
 
 /***/ }),
-/* 199 */
+/* 214 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var Capacitor = /** @class */ (function (_super) {
     tslib_1.__extends(Capacitor, _super);
     function Capacitor(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "c";
+        _this.c = "1p";
+        _this.c = _this.props.c ? _this.props.c : _this.c;
         _this.state = {};
         return _this;
     }
+    Capacitor.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, c: this.c, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    Capacitor.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
     Capacitor.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(-8, 2, 16, 44, this.props);
@@ -41765,8 +44382,8 @@ var Capacitor = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 26, 8, 26] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 26, 0, 48] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -8, y: 0, width: 16, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Capacitor;
 }(React.Component));
@@ -41774,24 +44391,67 @@ exports.Capacitor = Capacitor;
 
 
 /***/ }),
-/* 200 */
+/* 215 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
+var icon_1 = __webpack_require__(91);
+var Card = /** @class */ (function (_super) {
+    tslib_1.__extends(Card, _super);
+    function Card(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {};
+        return _this;
+    }
+    Card.prototype.render = function () {
+        return (React.createElement("div", { className: "shematic-card-property", draggable: true, onDragEnd: this.props.onDragEnd, style: { top: this.props.x, left: this.props.y } },
+            React.createElement("div", null, "Edit Property"),
+            React.createElement("div", null,
+                React.createElement("div", { onClick: this.props.onCloseClick },
+                    React.createElement(icon_1.Icon, { name: "done" })),
+                React.createElement("div", { onClick: this.props.onCloseClick },
+                    React.createElement(icon_1.Icon, { name: "cancel" })))));
+    };
+    return Card;
+}(React.Component));
+exports.Card = Card;
+
+
+/***/ }),
+/* 216 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var Diode = /** @class */ (function (_super) {
     tslib_1.__extends(Diode, _super);
     function Diode(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "d";
+        _this.area = "1";
+        _this.area = _this.props.area ? _this.props.area : _this.area;
         _this.state = {};
         return _this;
     }
+    Diode.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
+    Diode.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, area: this.area, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
     Diode.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(-10, 0, 16, 48, this.props);
@@ -41806,8 +44466,8 @@ var Diode = /** @class */ (function (_super) {
             (this.props.type === "ideal") ?
                 React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-10, 12, 10, 12, 10, 36, -10, 36, -10, 12] }, argsLine)) : null,
             React.createElement(react_konva_1.Rect, { x: -10, y: 0, width: 16, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Diode;
 }(React.Component));
@@ -41815,24 +44475,34 @@ exports.Diode = Diode;
 
 
 /***/ }),
-/* 201 */
+/* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var Ground = /** @class */ (function (_super) {
     tslib_1.__extends(Ground, _super);
     function Ground(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "g";
         _this.state = {};
         return _this;
     }
+    Ground.prototype.getPoints = function () {
+        return [this.refs.con1];
+    };
+    Ground.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
     Ground.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(-6, 0, 12, 14, this.props);
@@ -41845,7 +44515,7 @@ var Ground = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-6, 8, 0, 14] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 14, 6, 8] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -6, y: 0, width: 12, height: 14, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Ground;
 }(React.Component));
@@ -41853,28 +44523,35 @@ exports.Ground = Ground;
 
 
 /***/ }),
-/* 202 */
+/* 218 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var Inductor = /** @class */ (function (_super) {
     tslib_1.__extends(Inductor, _super);
     function Inductor(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "i";
+        _this.l = "1n";
+        _this.l = _this.props.l ? _this.props.l : _this.l;
         _this.state = {};
         return _this;
     }
-    Inductor.defaultProps = function () {
-        return {
-            l: "1n",
-        };
+    Inductor.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
+    Inductor.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, l: this.l, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
     };
     Inductor.prototype.render = function () {
         var _this = this;
@@ -41897,8 +44574,8 @@ var Inductor = /** @class */ (function (_super) {
                 :
                     null,
             React.createElement(react_konva_1.Rect, { x: -5, y: 0, width: 9, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Inductor;
 }(React.Component));
@@ -41906,24 +44583,36 @@ exports.Inductor = Inductor;
 
 
 /***/ }),
-/* 203 */
+/* 219 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var NFet = /** @class */ (function (_super) {
     tslib_1.__extends(NFet, _super);
     function NFet(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "n";
+        _this.wl = "2";
+        _this.wl = _this.props.wl ? _this.props.wl : _this.wl;
         _this.state = {};
         return _this;
     }
+    NFet.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2, this.refs.con3];
+    };
+    NFet.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, WL: this.wl, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
     NFet.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(-24, 0, 28, 48, this.props);
@@ -41939,9 +44628,9 @@ var NFet = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-24, 24, -12, 24] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-12, 16, -12, 32] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -24, y: 0, width: 28, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, y: 24 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 0, ref: "con1" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, parent: this, y: 24, ref: "con2" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 48, ref: "con3" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return NFet;
 }(React.Component));
@@ -41949,24 +44638,36 @@ exports.NFet = NFet;
 
 
 /***/ }),
-/* 204 */
+/* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var OpAmp = /** @class */ (function (_super) {
     tslib_1.__extends(OpAmp, _super);
     function OpAmp(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "o";
+        _this.A = "3000";
+        _this.A = _this.props.A ? _this.props.A : _this.A;
         _this.state = {};
         return _this;
     }
+    OpAmp.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2, this.refs.con3, this.refs.con4];
+    };
+    OpAmp.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, A: this.A, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
     OpAmp.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(0, -8, 40, 32, this.props);
@@ -41984,10 +44685,10 @@ var OpAmp = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [10, 16, 14, 16] }, argsLine)),
             React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 24, y: -8 }, argsText)),
             React.createElement(react_konva_1.Rect, { x: 0, y: -8, width: 40, height: 32, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 16 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 48, y: 8 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 24, y: 16 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 16, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 48, y: 8, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 24, y: 16, ref: "con4", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return OpAmp;
 }(React.Component));
@@ -41995,28 +44696,35 @@ exports.OpAmp = OpAmp;
 
 
 /***/ }),
-/* 205 */
+/* 221 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var PFet = /** @class */ (function (_super) {
     tslib_1.__extends(PFet, _super);
     function PFet(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "p";
+        _this.wl = "2";
+        _this.wl = _this.props.wl ? _this.props.wl : _this.wl;
         _this.state = {};
         return _this;
     }
-    PFet.defaultProps = function () {
-        return {
-            wl: "2",
-        };
+    PFet.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2, this.refs.con3];
+    };
+    PFet.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, WL: this.wl, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
     };
     PFet.prototype.render = function () {
         var _this = this;
@@ -42041,9 +44749,9 @@ var PFet = /** @class */ (function (_super) {
                 :
                     React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 2, y: 24, text: this.props.wl, fontSize: 3 }, argsText)),
             React.createElement(react_konva_1.Rect, { x: -24, y: 0, width: 28, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, y: 24 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, y: 24, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return PFet;
 }(React.Component));
@@ -42051,24 +44759,38 @@ exports.PFet = PFet;
 
 
 /***/ }),
-/* 206 */
+/* 222 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var Probe = /** @class */ (function (_super) {
     tslib_1.__extends(Probe, _super);
     function Probe(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "s";
+        _this.color = "magenta";
+        _this.offset = "0";
+        _this.color = _this.props.color ? _this.props.color : _this.color;
+        _this.offset = (_this.props.offset === undefined || _this.props.offset === "") ? _this.offset : _this.props.offset;
         _this.state = {};
         return _this;
     }
+    Probe.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, color: this.color, offset: this.offset, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    Probe.prototype.getPoints = function () {
+        return [this.refs.con1];
+    };
     Probe.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(0, -21, 21, 21, this.props);
@@ -42083,7 +44805,7 @@ var Probe = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [17, -21, 21, -17] }, argsLine)),
             React.createElement(react_konva_1.Arc, tslib_1.__assign({ x: 19, y: -11, angle: 90, innerRadius: 8, outerRadius: 8, rotation: 270 }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: 0, y: -21, width: 21, height: 21, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Probe;
 }(React.Component));
@@ -42091,28 +44813,35 @@ exports.Probe = Probe;
 
 
 /***/ }),
-/* 207 */
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var Resistor = /** @class */ (function (_super) {
     tslib_1.__extends(Resistor, _super);
     function Resistor(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "r";
+        _this.r = "1";
+        _this.r = _this.props.r ? _this.props.r : _this.r;
         _this.state = {};
         return _this;
     }
-    Resistor.defaultProps = function () {
-        return {
-            r: "1",
-        };
+    Resistor.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.props.name, r: this.r, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    Resistor.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
     };
     Resistor.prototype.render = function () {
         var _this = this;
@@ -42139,8 +44868,8 @@ var Resistor = /** @class */ (function (_super) {
                 :
                     null,
             React.createElement(react_konva_1.Rect, { x: -5, y: 0, width: 10, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Resistor;
 }(React.Component));
@@ -42148,14 +44877,14 @@ exports.Resistor = Resistor;
 
 
 /***/ }),
-/* 208 */
+/* 224 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
 var Select = /** @class */ (function (_super) {
     tslib_1.__extends(Select, _super);
@@ -42174,24 +44903,31 @@ exports.Select = Select;
 
 
 /***/ }),
-/* 209 */
+/* 225 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(7);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(14);
+var helper_1 = __webpack_require__(13);
 var connection_point_1 = __webpack_require__(16);
 var SLine = /** @class */ (function (_super) {
     tslib_1.__extends(SLine, _super);
     function SLine(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = "w";
         _this.state = {};
         return _this;
     }
+    SLine.prototype.json = function () {
+        return [this.type, [this.props.x, this.props.y, this.props.endX, this.props.endY]];
+    };
+    SLine.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
     SLine.prototype.render = function () {
         var _this = this;
         this.bundle = helper_1.PrepareBundle(-2, -2, 4, 4, this.props);
@@ -42200,44 +44936,13 @@ var SLine = /** @class */ (function (_super) {
         var x2 = this.props.endX - this.props.x;
         var y2 = this.props.endY - this.props.y;
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
-            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, x2, y2] }, argsLine)),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: x2, y: y2 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, x2, y2] }, argsLine, { onMouseDown: this.props.onClick })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, x: x2, y: y2 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return SLine;
 }(React.Component));
 exports.SLine = SLine;
-
-
-/***/ }),
-/* 210 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(8);
-var React = __webpack_require__(6);
-var icon_1 = __webpack_require__(90);
-var Card = /** @class */ (function (_super) {
-    tslib_1.__extends(Card, _super);
-    function Card(props) {
-        var _this = _super.call(this, props) || this;
-        _this.state = {};
-        return _this;
-    }
-    Card.prototype.render = function () {
-        return (React.createElement("div", { className: "shematic-card-property", draggable: true, onDragEnd: this.props.onDragEnd, style: { top: this.props.x, left: this.props.y } },
-            React.createElement("div", null, "Edit Property"),
-            React.createElement("div", null,
-                React.createElement("div", { onClick: this.props.onCloseClick },
-                    React.createElement(icon_1.Icon, { name: "done" })),
-                React.createElement("div", { onClick: this.props.onCloseClick },
-                    React.createElement(icon_1.Icon, { name: "cancel" })))));
-    };
-    return Card;
-}(React.Component));
-exports.Card = Card;
 
 
 /***/ })
