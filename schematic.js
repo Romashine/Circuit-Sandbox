@@ -328,7 +328,7 @@ module.exports = invariant;
 
 
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 
 /**
  * Similar to invariant but only logs a warning if the condition is not met.
@@ -717,6 +717,16 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+
+module.exports = __webpack_require__(20);
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /* WEBPACK VAR INJECTION */(function(process) {/**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -912,16 +922,6 @@ module.exports = ReactDOMComponentTree;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = __webpack_require__(20);
-
-
-/***/ }),
 /* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -975,7 +975,7 @@ var createClass = __webpack_require__(200);
 
 var ReactInstanceMap = __webpack_require__(26);
 var ReactMultiChild = __webpack_require__(80);
-var ReactUpdates = __webpack_require__(14);
+var ReactUpdates = __webpack_require__(15);
 
 var assign = __webpack_require__(5);
 var emptyObject = __webpack_require__(27);
@@ -1360,6 +1360,227 @@ module.exports = ReactKonva;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var const_1 = __webpack_require__(31);
+function PrepareLineProps(props) {
+    return {
+        stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
+        strokeWidth: props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH,
+    };
+}
+exports.PrepareLineProps = PrepareLineProps;
+function PrepareTextProps(props) {
+    return {
+        fill: props.fill || const_1.DEFAULT_FILL,
+        fontFamily: props.fontFamily || const_1.DEFAULT_FONT_FAMILY,
+        fontSize: const_1.DEFAULT_FONT_SIZE * (props.scale || const_1.DEFAULT_SCALE),
+        text: props.text || "",
+    };
+}
+exports.PrepareTextProps = PrepareTextProps;
+function PrepareCommonProps(props) {
+    var scale = props.scale || const_1.DEFAULT_SCALE;
+    return {
+        rotation: props.rotation,
+        scale: { x: scale, y: scale },
+        x: (props.x || 0) * scale,
+        y: (props.y || 0) * scale,
+        onDblClick: props.onDblClick,
+    };
+}
+exports.PrepareCommonProps = PrepareCommonProps;
+function RotatePoint(x, y, rotate) {
+    var temp;
+    if (rotate === 90) {
+        temp = x;
+        return {
+            x: -y,
+            y: temp,
+        };
+    }
+    else if (rotate === 180) {
+        return {
+            x: -x,
+            y: -y,
+        };
+    }
+    else if (rotate === 270) {
+        temp = -x;
+        return {
+            x: y,
+            y: temp,
+        };
+    }
+    else {
+        return { x: x, y: y };
+    }
+}
+exports.RotatePoint = RotatePoint;
+function PrepareBundle(x, y, width, height, props) {
+    if (props.rotation === 0) {
+        return {
+            x: props.x + x,
+            y: props.y + y,
+            width: width,
+            height: height,
+        };
+    }
+    else if (props.rotation === 90) {
+        return {
+            x: props.x - y,
+            y: props.y + x,
+            width: -1 * height,
+            height: width,
+        };
+    }
+    else if (props.rotation === 180) {
+        return {
+            x: props.x - x,
+            y: props.y - y,
+            width: -1 * width,
+            height: -1 * height,
+        };
+    }
+    else {
+        return {
+            x: props.x + y,
+            y: props.y - x,
+            width: height,
+            height: -1 * width,
+        };
+    }
+}
+exports.PrepareBundle = PrepareBundle;
+//#region definition of point labels 
+var labelIndex = 1;
+function prepare(lines) {
+    prepareClear(lines);
+    labelIndex = 1;
+    lines.sort(function (a, b) { if (a.component.type > b.component.type) {
+        return -1;
+    }
+    else {
+        return 1;
+    } })
+        .forEach(function (line) {
+        if (!line.label && line.component.type === "w") {
+            prepareLine(lines, line, labelIndex++);
+        }
+    });
+    lines.forEach(function (line) {
+        if (line.component.type !== "w") {
+            prepareAllConection(line, labelIndex++);
+        }
+    });
+    // console.log(JSON.stringify(lines, null, "  "));
+    // console.log(lines.map(((line) => `${line.component.type || "w"} l:${line.label} con:[${line.component.getPoints().map((con) => `${con.x}.${con.y}-${con.label}`).join("; ")}]`)));
+}
+exports.prepare = prepare;
+function prepareClear(lines) {
+    lines.forEach(function (line) {
+        line.label = undefined;
+        line.component.getPoints().forEach(function (connection) {
+            connection.label = undefined;
+        });
+    });
+}
+function prepareAllConection(line, label) {
+    line.component.getPoints().forEach(function (connection) {
+        if (!connection.label) {
+            connection.label = label++;
+        }
+    });
+}
+function lineConnectionIndex(line, connection) {
+    var fIndex = -1;
+    return line.component.getPoints().some(function (item, index) {
+        fIndex = index;
+        return (item.x === connection.x && item.y === connection.y);
+    }) ? fIndex : -1;
+}
+function prepareConnection(lines, connection, label) {
+    lines.forEach(function (line) {
+        var index = lineConnectionIndex(line, connection);
+        if (index !== -1) {
+            // line with the same connection
+            line.component.getPoints()[index].label = label;
+            if (line.component.type === "w") {
+                prepareLine(lines, line, label);
+            }
+        }
+    });
+}
+function prepareLine(lines, line, label) {
+    line.label = label;
+    line.component.getPoints().forEach(function (connection) {
+        if (!connection.label) {
+            prepareConnection(lines, connection, label);
+        }
+    });
+}
+//#endregion
+function EngineeringNotation(n, nplaces, trim) {
+    if (trim === void 0) { trim = true; }
+    if (n === 0) {
+        return "0";
+    }
+    if (Math.abs(n) < 1e-20) {
+        // flatten tiny numbers to zero
+        return "0";
+    }
+    if (n === undefined) {
+        return "undefined";
+    }
+    var sign = n < 0 ? -1 : 1;
+    var log10 = Math.log(sign * n) / Math.LN10;
+    var exp = Math.floor(log10 / 3); // powers of 1000
+    var mantissa = sign * Math.pow(10, log10 - 3 * exp);
+    // keep specified number of places following decimal point
+    var mstring = (mantissa + sign * 0.5 * Math.pow(10, -nplaces)).toString();
+    var mlen = mstring.length;
+    var endindex = mstring.indexOf(".");
+    if (endindex !== -1) {
+        if (nplaces > 0) {
+            endindex += nplaces + 1;
+            if (endindex > mlen) {
+                endindex = mlen;
+            }
+            if (trim) {
+                while (mstring.charAt(endindex - 1) === "0") {
+                    endindex -= 1;
+                }
+                if (mstring.charAt(endindex - 1) === ".") {
+                    endindex -= 1;
+                }
+            }
+        }
+        if (endindex < mlen) {
+            mstring = mstring.substring(0, endindex);
+        }
+    }
+    switch (exp) {
+        case -5: return mstring + "f";
+        case -4: return mstring + "p";
+        case -3: return mstring + "n";
+        case -2: return mstring + "u";
+        case -1: return mstring + "m";
+        case 0: return mstring;
+        case 1: return mstring + "K";
+        case 2: return mstring + "M";
+        case 3: return mstring + "G";
+    }
+    // don't have a good suffix, so just print the number
+    return n.toPrecision(4);
+}
+exports.EngineeringNotation = EngineeringNotation;
+
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /* WEBPACK VAR INJECTION */(function(process) {/**
  * Copyright (c) 2016-present, Facebook, Inc.
  *
@@ -1373,7 +1594,7 @@ module.exports = ReactKonva;
 
 var _prodInvariant = __webpack_require__(23);
 
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -1739,7 +1960,7 @@ module.exports = ReactComponentTreeHook;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1781,7 +2002,7 @@ emptyFunction.thatReturnsArgument = function (arg) {
 module.exports = emptyFunction;
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1809,174 +2030,39 @@ module.exports = { debugTool: debugTool };
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var const_1 = __webpack_require__(38);
-function PrepareLineProps(props) {
-    return {
-        stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
-        strokeWidth: props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH,
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
+var helper_1 = __webpack_require__(10);
+var ConnectionPoint = /** @class */ (function (_super) {
+    tslib_1.__extends(ConnectionPoint, _super);
+    function ConnectionPoint(props) {
+        var _this = _super.call(this, props) || this;
+        _this.x = 0;
+        _this.y = 0;
+        _this.state = {};
+        return _this;
+    }
+    ConnectionPoint.prototype.render = function () {
+        var _this = this;
+        var argsLine = helper_1.PrepareLineProps(this.props);
+        this.x = this.props.x + this.props.parent.props.x;
+        this.y = this.props.y + this.props.parent.props.y;
+        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.props.x, _this.props.y); } })));
     };
-}
-exports.PrepareLineProps = PrepareLineProps;
-function PrepareTextProps(props) {
-    return {
-        fill: props.fill || const_1.DEFAULT_FILL,
-        fontFamily: props.fontFamily || const_1.DEFAULT_FONT_FAMILY,
-        fontSize: const_1.DEFAULT_FONT_SIZE * (props.scale || const_1.DEFAULT_SCALE),
-        text: props.text || "",
-    };
-}
-exports.PrepareTextProps = PrepareTextProps;
-function PrepareCommonProps(props) {
-    var scale = props.scale || const_1.DEFAULT_SCALE;
-    return {
-        rotation: props.rotation,
-        scale: { x: scale, y: scale },
-        x: (props.x || 0) * scale,
-        y: (props.y || 0) * scale,
-        onDblClick: props.onDblClick,
-    };
-}
-exports.PrepareCommonProps = PrepareCommonProps;
-function RotatePoint(x, y, rotate) {
-    var temp;
-    if (rotate === 90) {
-        temp = x;
-        return {
-            x: -y,
-            y: temp,
-        };
-    }
-    else if (rotate === 180) {
-        return {
-            x: -x,
-            y: -y,
-        };
-    }
-    else if (rotate === 270) {
-        temp = -x;
-        return {
-            x: y,
-            y: temp,
-        };
-    }
-    else {
-        return { x: x, y: y };
-    }
-}
-exports.RotatePoint = RotatePoint;
-function PrepareBundle(x, y, width, height, props) {
-    if (props.rotation === 0) {
-        return {
-            x: props.x + x,
-            y: props.y + y,
-            width: width,
-            height: height,
-        };
-    }
-    else if (props.rotation === 90) {
-        return {
-            x: props.x - y,
-            y: props.y + x,
-            width: -1 * height,
-            height: width,
-        };
-    }
-    else if (props.rotation === 180) {
-        return {
-            x: props.x - x,
-            y: props.y - y,
-            width: -1 * width,
-            height: -1 * height,
-        };
-    }
-    else {
-        return {
-            x: props.x + y,
-            y: props.y - x,
-            width: height,
-            height: -1 * width,
-        };
-    }
-}
-exports.PrepareBundle = PrepareBundle;
-//#region definition of point labels 
-var labelIndex = 1;
-function prepare(lines) {
-    prepareClear(lines);
-    labelIndex = 1;
-    lines.sort(function (a, b) { if (a.component.type > b.component.type) {
-        return -1;
-    }
-    else {
-        return 1;
-    } })
-        .forEach(function (line) {
-        if (!line.label && line.component.type === "w") {
-            prepareLine(lines, line, labelIndex++);
-        }
-    });
-    lines.forEach(function (line) {
-        if (line.component.type !== "w") {
-            prepareAllConection(line, labelIndex++);
-        }
-    });
-    // console.log(JSON.stringify(lines, null, "  "));
-    console.log(lines.map((function (line) { return (line.component.type || "w") + " l:" + line.label + " con:[" + line.component.getPoints().map(function (con) { return con.x + "." + con.y + "-" + con.label; }).join("; ") + "]"; })));
-}
-exports.prepare = prepare;
-function prepareClear(lines) {
-    lines.forEach(function (line) {
-        line.label = undefined;
-        line.component.getPoints().forEach(function (connection) {
-            connection.label = undefined;
-        });
-    });
-}
-function prepareAllConection(line, label) {
-    line.component.getPoints().forEach(function (connection) {
-        if (!connection.label) {
-            connection.label = label++;
-        }
-    });
-}
-function lineConnectionIndex(line, connection) {
-    var fIndex = -1;
-    return line.component.getPoints().some(function (item, index) {
-        fIndex = index;
-        return (item.x === connection.x && item.y === connection.y);
-    }) ? fIndex : -1;
-}
-function prepareConnection(lines, connection, label) {
-    lines.forEach(function (line) {
-        var index = lineConnectionIndex(line, connection);
-        if (index !== -1) {
-            // line with the same connection
-            line.component.getPoints()[index].label = label;
-            if (line.component.type === "w") {
-                prepareLine(lines, line, label);
-            }
-        }
-    });
-}
-function prepareLine(lines, line, label) {
-    line.label = label;
-    line.component.getPoints().forEach(function (connection) {
-        if (!connection.label) {
-            prepareConnection(lines, connection, label);
-        }
-    });
-}
-//#endregion
+    return ConnectionPoint;
+}(React.Component));
+exports.ConnectionPoint = ConnectionPoint;
 
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1997,7 +2083,7 @@ var CallbackQueue = __webpack_require__(69);
 var PooledClass = __webpack_require__(22);
 var ReactFeatureFlags = __webpack_require__(70);
 var ReactReconciler = __webpack_require__(24);
-var Transaction = __webpack_require__(33);
+var Transaction = __webpack_require__(34);
 
 var invariant = __webpack_require__(1);
 
@@ -2231,7 +2317,7 @@ module.exports = ReactUpdates;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2263,38 +2349,6 @@ var ReactCurrentOwner = {
 module.exports = ReactCurrentOwner;
 
 /***/ }),
-/* 16 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
-var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var ConnectionPoint = /** @class */ (function (_super) {
-    tslib_1.__extends(ConnectionPoint, _super);
-    function ConnectionPoint(props) {
-        var _this = _super.call(this, props) || this;
-        _this.x = 0;
-        _this.y = 0;
-        _this.state = {};
-        return _this;
-    }
-    ConnectionPoint.prototype.render = function () {
-        var _this = this;
-        var argsLine = helper_1.PrepareLineProps(this.props);
-        this.x = this.props.x + this.props.parent.props.x;
-        this.y = this.props.y + this.props.parent.props.y;
-        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.props.x, _this.props.y); } })));
-    };
-    return ConnectionPoint;
-}(React.Component));
-exports.ConnectionPoint = ConnectionPoint;
-
-
-/***/ }),
 /* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2313,7 +2367,7 @@ var _assign = __webpack_require__(5);
 
 var PooledClass = __webpack_require__(22);
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var warning = __webpack_require__(2);
 
 var didWarnForAddedNewProperty = false;
@@ -2879,7 +2933,7 @@ var cloneElement = ReactElement.cloneElement;
 
 if (process.env.NODE_ENV !== 'production') {
   var lowPriorityWarning = __webpack_require__(39);
-  var canDefineProperty = __webpack_require__(31);
+  var canDefineProperty = __webpack_require__(32);
   var ReactElementValidator = __webpack_require__(61);
   var didWarnPropTypesDeprecated = false;
   createElement = ReactElementValidator.createElement;
@@ -2999,10 +3053,10 @@ module.exports = React;
 
 var _assign = __webpack_require__(5);
 
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 
 var warning = __webpack_require__(2);
-var canDefineProperty = __webpack_require__(31);
+var canDefineProperty = __webpack_require__(32);
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
 var REACT_ELEMENT_TYPE = __webpack_require__(59);
@@ -3501,7 +3555,7 @@ module.exports = reactProdInvariant;
 
 
 var ReactRef = __webpack_require__(119);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactInstrumentation = __webpack_require__(13);
 
 var warning = __webpack_require__(2);
 
@@ -3671,7 +3725,7 @@ module.exports = ReactReconciler;
 
 
 var DOMNamespaces = __webpack_require__(47);
-var setInnerHTML = __webpack_require__(35);
+var setInnerHTML = __webpack_require__(36);
 
 var createMicrosoftUnsafeLocalFunction = __webpack_require__(48);
 var setTextContent = __webpack_require__(74);
@@ -4004,7 +4058,7 @@ module.exports = EventPropagators;
 
 var _prodInvariant = __webpack_require__(3);
 
-var EventPluginRegistry = __webpack_require__(32);
+var EventPluginRegistry = __webpack_require__(33);
 var EventPluginUtils = __webpack_require__(41);
 var ReactErrorUtils = __webpack_require__(42);
 
@@ -4332,6 +4386,28 @@ module.exports = SyntheticUIEvent;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_STROKE = "black";
+exports.DEFAULT_STROKE_SELECTED = "blue";
+exports.DEFAULT_STROKE_WIDTH = 1;
+exports.DEFAULT_FILL = "red";
+exports.DEFAULT_FONT_FAMILY = "Calibri";
+exports.DEFAULT_FONT_SIZE = 12;
+exports.DEFAULT_SCALE = 2;
+exports.DEFAULT_SCALE_STEP = 0.5;
+exports.DEFAULT_SHIFT_STEP = 96;
+exports.DEFAULT_ROTATE_STEP = 90;
+exports.DEFAULT_GRID_STROKE = "grey";
+exports.DEFAULT_GRID_WIDTH = 0.1;
+exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
+
+
+/***/ }),
+/* 32 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /* WEBPACK VAR INJECTION */(function(process) {/**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -4358,7 +4434,7 @@ module.exports = canDefineProperty;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4615,7 +4691,7 @@ module.exports = EventPluginRegistry;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4847,7 +4923,7 @@ module.exports = TransactionImpl;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4922,7 +4998,7 @@ SyntheticUIEvent.augmentClass(SyntheticMouseEvent, MouseEventInterface);
 module.exports = SyntheticMouseEvent;
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5023,7 +5099,7 @@ if (ExecutionEnvironment.canUseDOM) {
 module.exports = setInnerHTML;
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5148,7 +5224,7 @@ function escapeTextContentForBrowser(text) {
 module.exports = escapeTextContentForBrowser;
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5164,7 +5240,7 @@ module.exports = escapeTextContentForBrowser;
 
 var _assign = __webpack_require__(5);
 
-var EventPluginRegistry = __webpack_require__(32);
+var EventPluginRegistry = __webpack_require__(33);
 var ReactEventEmitterMixin = __webpack_require__(145);
 var ViewportMetrics = __webpack_require__(73);
 
@@ -5473,28 +5549,6 @@ var ReactBrowserEventEmitter = _assign({}, ReactEventEmitterMixin, {
 });
 
 module.exports = ReactBrowserEventEmitter;
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_STROKE = "black";
-exports.DEFAULT_STROKE_SELECTED = "blue";
-exports.DEFAULT_STROKE_WIDTH = 1;
-exports.DEFAULT_FILL = "red";
-exports.DEFAULT_FONT_FAMILY = "Calibri";
-exports.DEFAULT_FONT_SIZE = 12;
-exports.DEFAULT_SCALE = 2;
-exports.DEFAULT_SCALE_STEP = 0.5;
-exports.DEFAULT_SHIFT_STEP = 96;
-exports.DEFAULT_ROTATE_STEP = 90;
-exports.DEFAULT_GRID_STROKE = "grey";
-exports.DEFAULT_GRID_WIDTH = 0.1;
-exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
-
 
 /***/ }),
 /* 39 */
@@ -6060,11 +6114,11 @@ module.exports = getEventModifierState;
 
 var DOMLazyTree = __webpack_require__(25);
 var Danger = __webpack_require__(130);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactInstrumentation = __webpack_require__(13);
 
 var createMicrosoftUnsafeLocalFunction = __webpack_require__(48);
-var setInnerHTML = __webpack_require__(35);
+var setInnerHTML = __webpack_require__(36);
 var setTextContent = __webpack_require__(74);
 
 function getNodeAfter(parentNode, node) {
@@ -6716,10 +6770,10 @@ module.exports = KeyEscapeUtils;
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 var ReactInstanceMap = __webpack_require__(26);
-var ReactInstrumentation = __webpack_require__(12);
-var ReactUpdates = __webpack_require__(14);
+var ReactInstrumentation = __webpack_require__(13);
+var ReactUpdates = __webpack_require__(15);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -6954,7 +7008,7 @@ module.exports = ReactUpdateQueue;
 
 var _assign = __webpack_require__(5);
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var warning = __webpack_require__(2);
 
 var validateDOMNesting = emptyFunction;
@@ -7385,7 +7439,7 @@ var _prodInvariant = __webpack_require__(23),
 
 var ReactNoopUpdateQueue = __webpack_require__(58);
 
-var canDefineProperty = __webpack_require__(31);
+var canDefineProperty = __webpack_require__(32);
 var emptyObject = __webpack_require__(27);
 var invariant = __webpack_require__(1);
 var lowPriorityWarning = __webpack_require__(39);
@@ -7700,13 +7754,13 @@ module.exports = getIteratorFn;
 
 
 
-var ReactCurrentOwner = __webpack_require__(15);
-var ReactComponentTreeHook = __webpack_require__(10);
+var ReactCurrentOwner = __webpack_require__(16);
+var ReactComponentTreeHook = __webpack_require__(11);
 var ReactElement = __webpack_require__(21);
 
 var checkReactTypeSpec = __webpack_require__(102);
 
-var canDefineProperty = __webpack_require__(31);
+var canDefineProperty = __webpack_require__(32);
 var getIteratorFn = __webpack_require__(60);
 var warning = __webpack_require__(2);
 var lowPriorityWarning = __webpack_require__(39);
@@ -7977,7 +8031,7 @@ module.exports = function(isValidElement) {
 
 
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
 var assign = __webpack_require__(5);
@@ -9707,7 +9761,7 @@ module.exports = ReactFeatureFlags;
 
 
 
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 
 function isCheckable(elem) {
   var type = elem.type;
@@ -9916,8 +9970,8 @@ module.exports = ViewportMetrics;
 
 
 var ExecutionEnvironment = __webpack_require__(8);
-var escapeTextContentForBrowser = __webpack_require__(36);
-var setInnerHTML = __webpack_require__(35);
+var escapeTextContentForBrowser = __webpack_require__(37);
+var setInnerHTML = __webpack_require__(36);
 
 /**
  * Set the textContent property of a node, ensuring that whitespace is preserved
@@ -10159,8 +10213,8 @@ module.exports = CSSProperty;
 
 
 var DOMProperty = __webpack_require__(18);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactInstrumentation = __webpack_require__(13);
 
 var quoteAttributeValueForBrowser = __webpack_require__(144);
 var warning = __webpack_require__(2);
@@ -10420,8 +10474,8 @@ module.exports = ReactPropTypesSecret;
 var _assign = __webpack_require__(5);
 
 var LinkedValueUtils = __webpack_require__(49);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactUpdates = __webpack_require__(14);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactUpdates = __webpack_require__(15);
 
 var warning = __webpack_require__(2);
 
@@ -10625,13 +10679,13 @@ var _prodInvariant = __webpack_require__(3);
 
 var ReactComponentEnvironment = __webpack_require__(50);
 var ReactInstanceMap = __webpack_require__(26);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactInstrumentation = __webpack_require__(13);
 
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 var ReactReconciler = __webpack_require__(24);
 var ReactChildReconciler = __webpack_require__(150);
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var flattenChildren = __webpack_require__(157);
 var invariant = __webpack_require__(1);
 
@@ -11355,7 +11409,7 @@ module.exports = ReactHostComponent;
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 var REACT_ELEMENT_TYPE = __webpack_require__(155);
 
 var getIteratorFn = __webpack_require__(156);
@@ -11534,7 +11588,7 @@ module.exports = traverseAllChildren;
  * @typechecks
  */
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 
 /**
  * Upstream version of event listener. Does not take into account specific
@@ -11787,23 +11841,23 @@ var _prodInvariant = __webpack_require__(3);
 var DOMLazyTree = __webpack_require__(25);
 var DOMProperty = __webpack_require__(18);
 var React = __webpack_require__(20);
-var ReactBrowserEventEmitter = __webpack_require__(37);
-var ReactCurrentOwner = __webpack_require__(15);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactBrowserEventEmitter = __webpack_require__(38);
+var ReactCurrentOwner = __webpack_require__(16);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDOMContainerInfo = __webpack_require__(185);
 var ReactDOMFeatureFlags = __webpack_require__(186);
 var ReactFeatureFlags = __webpack_require__(70);
 var ReactInstanceMap = __webpack_require__(26);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactInstrumentation = __webpack_require__(13);
 var ReactMarkupChecksum = __webpack_require__(187);
 var ReactReconciler = __webpack_require__(24);
 var ReactUpdateQueue = __webpack_require__(54);
-var ReactUpdates = __webpack_require__(14);
+var ReactUpdates = __webpack_require__(15);
 
 var emptyObject = __webpack_require__(27);
 var instantiateReactComponent = __webpack_require__(81);
 var invariant = __webpack_require__(1);
-var setInnerHTML = __webpack_require__(35);
+var setInnerHTML = __webpack_require__(36);
 var shouldUpdateReactComponent = __webpack_require__(52);
 var warning = __webpack_require__(2);
 
@@ -12350,7 +12404,7 @@ module.exports = getHostComponentFromComposite;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var Icon = /** @class */ (function (_super) {
     tslib_1.__extends(Icon, _super);
     function Icon(props) {
@@ -13019,7 +13073,7 @@ exports.math_fmod = math_fmod;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var ReactDOM = __webpack_require__(110);
 var app_1 = __webpack_require__(195);
 ReactDOM.render(React.createElement(app_1.App, null), document.getElementById("sandbox"));
@@ -13043,7 +13097,7 @@ ReactDOM.render(React.createElement(app_1.App, null), document.getElementById("s
 var PooledClass = __webpack_require__(98);
 var ReactElement = __webpack_require__(21);
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var traverseAllChildren = __webpack_require__(99);
 
 var twoArgumentPooler = PooledClass.twoArgumentPooler;
@@ -13352,7 +13406,7 @@ module.exports = PooledClass;
 
 var _prodInvariant = __webpack_require__(23);
 
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 var REACT_ELEMENT_TYPE = __webpack_require__(59);
 
 var getIteratorFn = __webpack_require__(60);
@@ -13781,7 +13835,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(10);
+  ReactComponentTreeHook = __webpack_require__(11);
 }
 
 var loggedTypeFailures = {};
@@ -13823,7 +13877,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         if (process.env.NODE_ENV !== 'production') {
           if (!ReactComponentTreeHook) {
-            ReactComponentTreeHook = __webpack_require__(10);
+            ReactComponentTreeHook = __webpack_require__(11);
           }
           if (debugID !== null) {
             componentStackInfo = ReactComponentTreeHook.getStackAddendumByID(debugID);
@@ -14091,11 +14145,11 @@ module.exports = __webpack_require__(111);
 
 
 
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDefaultInjection = __webpack_require__(112);
 var ReactMount = __webpack_require__(89);
 var ReactReconciler = __webpack_require__(24);
-var ReactUpdates = __webpack_require__(14);
+var ReactUpdates = __webpack_require__(15);
 var ReactVersion = __webpack_require__(189);
 
 var findDOMNode = __webpack_require__(190);
@@ -14176,7 +14230,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 if (process.env.NODE_ENV !== 'production') {
-  var ReactInstrumentation = __webpack_require__(12);
+  var ReactInstrumentation = __webpack_require__(13);
   var ReactDOMUnknownPropertyHook = __webpack_require__(192);
   var ReactDOMNullInputValuePropHook = __webpack_require__(193);
   var ReactDOMInvalidARIAHook = __webpack_require__(194);
@@ -14212,7 +14266,7 @@ var EnterLeaveEventPlugin = __webpack_require__(127);
 var HTMLDOMPropertyConfig = __webpack_require__(128);
 var ReactComponentBrowserEnvironment = __webpack_require__(129);
 var ReactDOMComponent = __webpack_require__(135);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDOMEmptyComponent = __webpack_require__(160);
 var ReactDOMTreeTraversal = __webpack_require__(161);
 var ReactDOMTextComponent = __webpack_require__(162);
@@ -14937,8 +14991,8 @@ module.exports = SyntheticInputEvent;
 var EventPluginHub = __webpack_require__(29);
 var EventPropagators = __webpack_require__(28);
 var ExecutionEnvironment = __webpack_require__(8);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactUpdates = __webpack_require__(14);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactUpdates = __webpack_require__(15);
 var SyntheticEvent = __webpack_require__(17);
 
 var inputValueTracking = __webpack_require__(71);
@@ -15441,7 +15495,7 @@ module.exports = ReactOwner;
 
 var ReactInvalidSetStateWarningHook = __webpack_require__(122);
 var ReactHostOperationHistoryHook = __webpack_require__(123);
-var ReactComponentTreeHook = __webpack_require__(10);
+var ReactComponentTreeHook = __webpack_require__(11);
 var ExecutionEnvironment = __webpack_require__(8);
 
 var performanceNow = __webpack_require__(124);
@@ -15974,8 +16028,8 @@ module.exports = DefaultEventPluginOrder;
 
 
 var EventPropagators = __webpack_require__(28);
-var ReactDOMComponentTree = __webpack_require__(6);
-var SyntheticMouseEvent = __webpack_require__(34);
+var ReactDOMComponentTree = __webpack_require__(7);
+var SyntheticMouseEvent = __webpack_require__(35);
 
 var eventTypes = {
   mouseEnter: {
@@ -16351,7 +16405,7 @@ var DOMLazyTree = __webpack_require__(25);
 var ExecutionEnvironment = __webpack_require__(8);
 
 var createNodesFromMarkup = __webpack_require__(131);
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var invariant = __webpack_require__(1);
 
 var Danger = {
@@ -16714,7 +16768,7 @@ module.exports = getMarkupWrap;
 
 
 var DOMChildrenOperations = __webpack_require__(46);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 
 /**
  * Operations used to process updates to DOM nodes.
@@ -16761,20 +16815,20 @@ var DOMNamespaces = __webpack_require__(47);
 var DOMProperty = __webpack_require__(18);
 var DOMPropertyOperations = __webpack_require__(77);
 var EventPluginHub = __webpack_require__(29);
-var EventPluginRegistry = __webpack_require__(32);
-var ReactBrowserEventEmitter = __webpack_require__(37);
+var EventPluginRegistry = __webpack_require__(33);
+var ReactBrowserEventEmitter = __webpack_require__(38);
 var ReactDOMComponentFlags = __webpack_require__(65);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDOMInput = __webpack_require__(147);
 var ReactDOMOption = __webpack_require__(148);
 var ReactDOMSelect = __webpack_require__(79);
 var ReactDOMTextarea = __webpack_require__(149);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactInstrumentation = __webpack_require__(13);
 var ReactMultiChild = __webpack_require__(80);
 var ReactServerRenderingTransaction = __webpack_require__(158);
 
-var emptyFunction = __webpack_require__(11);
-var escapeTextContentForBrowser = __webpack_require__(36);
+var emptyFunction = __webpack_require__(12);
+var escapeTextContentForBrowser = __webpack_require__(37);
 var invariant = __webpack_require__(1);
 var isEventSupported = __webpack_require__(44);
 var shallowEqual = __webpack_require__(51);
@@ -17767,7 +17821,7 @@ module.exports = ReactDOMComponent;
 
 
 
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 
 var focusNode = __webpack_require__(75);
 
@@ -17796,7 +17850,7 @@ module.exports = AutoFocusUtils;
 
 var CSSProperty = __webpack_require__(76);
 var ExecutionEnvironment = __webpack_require__(8);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactInstrumentation = __webpack_require__(13);
 
 var camelizeStyleName = __webpack_require__(138);
 var dangerousStyleValue = __webpack_require__(140);
@@ -18285,7 +18339,7 @@ module.exports = memoizeStringOnly;
 
 
 
-var escapeTextContentForBrowser = __webpack_require__(36);
+var escapeTextContentForBrowser = __webpack_require__(37);
 
 /**
  * Escapes attribute value to prevent scripting attacks.
@@ -18458,8 +18512,8 @@ var _prodInvariant = __webpack_require__(3),
 
 var DOMPropertyOperations = __webpack_require__(77);
 var LinkedValueUtils = __webpack_require__(49);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactUpdates = __webpack_require__(14);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactUpdates = __webpack_require__(15);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -18747,7 +18801,7 @@ module.exports = ReactDOMInput;
 var _assign = __webpack_require__(5);
 
 var React = __webpack_require__(20);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDOMSelect = __webpack_require__(79);
 
 var warning = __webpack_require__(2);
@@ -18874,8 +18928,8 @@ var _prodInvariant = __webpack_require__(3),
     _assign = __webpack_require__(5);
 
 var LinkedValueUtils = __webpack_require__(49);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactUpdates = __webpack_require__(14);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactUpdates = __webpack_require__(15);
 
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
@@ -19050,7 +19104,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(10);
+  ReactComponentTreeHook = __webpack_require__(11);
 }
 
 function instantiateChild(childInstances, child, name, selfDebugID) {
@@ -19058,7 +19112,7 @@ function instantiateChild(childInstances, child, name, selfDebugID) {
   var keyUnique = childInstances[name] === undefined;
   if (process.env.NODE_ENV !== 'production') {
     if (!ReactComponentTreeHook) {
-      ReactComponentTreeHook = __webpack_require__(10);
+      ReactComponentTreeHook = __webpack_require__(11);
     }
     if (!keyUnique) {
       process.env.NODE_ENV !== 'production' ? warning(false, 'flattenChildren(...): Encountered two children with the same key, ' + '`%s`. Child keys must be unique; when two children share a key, only ' + 'the first child will be used.%s', KeyEscapeUtils.unescape(name), ReactComponentTreeHook.getStackAddendumByID(selfDebugID)) : void 0;
@@ -19196,10 +19250,10 @@ var _prodInvariant = __webpack_require__(3),
 
 var React = __webpack_require__(20);
 var ReactComponentEnvironment = __webpack_require__(50);
-var ReactCurrentOwner = __webpack_require__(15);
+var ReactCurrentOwner = __webpack_require__(16);
 var ReactErrorUtils = __webpack_require__(42);
 var ReactInstanceMap = __webpack_require__(26);
-var ReactInstrumentation = __webpack_require__(12);
+var ReactInstrumentation = __webpack_require__(13);
 var ReactNodeTypes = __webpack_require__(82);
 var ReactReconciler = __webpack_require__(24);
 
@@ -20111,7 +20165,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(10);
+  ReactComponentTreeHook = __webpack_require__(11);
 }
 
 var loggedTypeFailures = {};
@@ -20153,7 +20207,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         if (process.env.NODE_ENV !== 'production') {
           if (!ReactComponentTreeHook) {
-            ReactComponentTreeHook = __webpack_require__(10);
+            ReactComponentTreeHook = __webpack_require__(11);
           }
           if (debugID !== null) {
             componentStackInfo = ReactComponentTreeHook.getStackAddendumByID(debugID);
@@ -20319,7 +20373,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(10);
+  ReactComponentTreeHook = __webpack_require__(11);
 }
 
 /**
@@ -20335,7 +20389,7 @@ function flattenSingleChildIntoContext(traverseContext, child, name, selfDebugID
     var keyUnique = result[name] === undefined;
     if (process.env.NODE_ENV !== 'production') {
       if (!ReactComponentTreeHook) {
-        ReactComponentTreeHook = __webpack_require__(10);
+        ReactComponentTreeHook = __webpack_require__(11);
       }
       if (!keyUnique) {
         process.env.NODE_ENV !== 'production' ? warning(false, 'flattenChildren(...): Encountered two children with the same key, ' + '`%s`. Child keys must be unique; when two children share a key, only ' + 'the first child will be used.%s', KeyEscapeUtils.unescape(name), ReactComponentTreeHook.getStackAddendumByID(selfDebugID)) : void 0;
@@ -20389,8 +20443,8 @@ module.exports = flattenChildren;
 var _assign = __webpack_require__(5);
 
 var PooledClass = __webpack_require__(22);
-var Transaction = __webpack_require__(33);
-var ReactInstrumentation = __webpack_require__(12);
+var Transaction = __webpack_require__(34);
+var ReactInstrumentation = __webpack_require__(13);
 var ReactServerUpdateQueue = __webpack_require__(159);
 
 /**
@@ -20626,7 +20680,7 @@ module.exports = ReactServerUpdateQueue;
 var _assign = __webpack_require__(5);
 
 var DOMLazyTree = __webpack_require__(25);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 
 var ReactDOMEmptyComponent = function (instantiate) {
   // ReactCompositeComponent uses this:
@@ -20831,9 +20885,9 @@ var _prodInvariant = __webpack_require__(3),
 
 var DOMChildrenOperations = __webpack_require__(46);
 var DOMLazyTree = __webpack_require__(25);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 
-var escapeTextContentForBrowser = __webpack_require__(36);
+var escapeTextContentForBrowser = __webpack_require__(37);
 var invariant = __webpack_require__(1);
 var validateDOMNesting = __webpack_require__(55);
 
@@ -20994,10 +21048,10 @@ module.exports = ReactDOMTextComponent;
 
 var _assign = __webpack_require__(5);
 
-var ReactUpdates = __webpack_require__(14);
-var Transaction = __webpack_require__(33);
+var ReactUpdates = __webpack_require__(15);
+var Transaction = __webpack_require__(34);
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 
 var RESET_BATCHED_UPDATES = {
   initialize: emptyFunction,
@@ -21068,8 +21122,8 @@ var _assign = __webpack_require__(5);
 var EventListener = __webpack_require__(86);
 var ExecutionEnvironment = __webpack_require__(8);
 var PooledClass = __webpack_require__(22);
-var ReactDOMComponentTree = __webpack_require__(6);
-var ReactUpdates = __webpack_require__(14);
+var ReactDOMComponentTree = __webpack_require__(7);
+var ReactUpdates = __webpack_require__(15);
 
 var getEventTarget = __webpack_require__(43);
 var getUnboundedScrollPosition = __webpack_require__(165);
@@ -21268,9 +21322,9 @@ var EventPluginHub = __webpack_require__(29);
 var EventPluginUtils = __webpack_require__(41);
 var ReactComponentEnvironment = __webpack_require__(50);
 var ReactEmptyComponent = __webpack_require__(83);
-var ReactBrowserEventEmitter = __webpack_require__(37);
+var ReactBrowserEventEmitter = __webpack_require__(38);
 var ReactHostComponent = __webpack_require__(84);
-var ReactUpdates = __webpack_require__(14);
+var ReactUpdates = __webpack_require__(15);
 
 var ReactInjection = {
   Component: ReactComponentEnvironment.injection,
@@ -21304,10 +21358,10 @@ var _assign = __webpack_require__(5);
 
 var CallbackQueue = __webpack_require__(69);
 var PooledClass = __webpack_require__(22);
-var ReactBrowserEventEmitter = __webpack_require__(37);
+var ReactBrowserEventEmitter = __webpack_require__(38);
 var ReactInputSelection = __webpack_require__(87);
-var ReactInstrumentation = __webpack_require__(12);
-var Transaction = __webpack_require__(33);
+var ReactInstrumentation = __webpack_require__(13);
+var Transaction = __webpack_require__(34);
 var ReactUpdateQueue = __webpack_require__(54);
 
 /**
@@ -22180,7 +22234,7 @@ module.exports = SVGDOMPropertyConfig;
 
 var EventPropagators = __webpack_require__(28);
 var ExecutionEnvironment = __webpack_require__(8);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactInputSelection = __webpack_require__(87);
 var SyntheticEvent = __webpack_require__(17);
 
@@ -22374,20 +22428,20 @@ var _prodInvariant = __webpack_require__(3);
 
 var EventListener = __webpack_require__(86);
 var EventPropagators = __webpack_require__(28);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactDOMComponentTree = __webpack_require__(7);
 var SyntheticAnimationEvent = __webpack_require__(176);
 var SyntheticClipboardEvent = __webpack_require__(177);
 var SyntheticEvent = __webpack_require__(17);
 var SyntheticFocusEvent = __webpack_require__(178);
 var SyntheticKeyboardEvent = __webpack_require__(179);
-var SyntheticMouseEvent = __webpack_require__(34);
+var SyntheticMouseEvent = __webpack_require__(35);
 var SyntheticDragEvent = __webpack_require__(181);
 var SyntheticTouchEvent = __webpack_require__(182);
 var SyntheticTransitionEvent = __webpack_require__(183);
 var SyntheticUIEvent = __webpack_require__(30);
 var SyntheticWheelEvent = __webpack_require__(184);
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var getEventCharCode = __webpack_require__(56);
 var invariant = __webpack_require__(1);
 
@@ -22923,7 +22977,7 @@ module.exports = getEventKey;
 
 
 
-var SyntheticMouseEvent = __webpack_require__(34);
+var SyntheticMouseEvent = __webpack_require__(35);
 
 /**
  * @interface DragEvent
@@ -23052,7 +23106,7 @@ module.exports = SyntheticTransitionEvent;
 
 
 
-var SyntheticMouseEvent = __webpack_require__(34);
+var SyntheticMouseEvent = __webpack_require__(35);
 
 /**
  * @interface WheelEvent
@@ -23284,8 +23338,8 @@ module.exports = '15.6.2';
 
 var _prodInvariant = __webpack_require__(3);
 
-var ReactCurrentOwner = __webpack_require__(15);
-var ReactDOMComponentTree = __webpack_require__(6);
+var ReactCurrentOwner = __webpack_require__(16);
+var ReactDOMComponentTree = __webpack_require__(7);
 var ReactInstanceMap = __webpack_require__(26);
 
 var getHostComponentFromComposite = __webpack_require__(90);
@@ -23366,8 +23420,8 @@ module.exports = ReactMount.renderSubtreeIntoContainer;
 
 
 var DOMProperty = __webpack_require__(18);
-var EventPluginRegistry = __webpack_require__(32);
-var ReactComponentTreeHook = __webpack_require__(10);
+var EventPluginRegistry = __webpack_require__(33);
+var ReactComponentTreeHook = __webpack_require__(11);
 
 var warning = __webpack_require__(2);
 
@@ -23481,7 +23535,7 @@ module.exports = ReactDOMUnknownPropertyHook;
 
 
 
-var ReactComponentTreeHook = __webpack_require__(10);
+var ReactComponentTreeHook = __webpack_require__(11);
 
 var warning = __webpack_require__(2);
 
@@ -23529,7 +23583,7 @@ module.exports = ReactDOMNullInputValuePropHook;
 
 
 var DOMProperty = __webpack_require__(18);
-var ReactComponentTreeHook = __webpack_require__(10);
+var ReactComponentTreeHook = __webpack_require__(11);
 
 var warning = __webpack_require__(2);
 
@@ -23618,11 +23672,11 @@ module.exports = ReactDOMInvalidARIAHook;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
 var grid_1 = __webpack_require__(201);
 var icon_1 = __webpack_require__(91);
-var const_1 = __webpack_require__(38);
+var const_1 = __webpack_require__(31);
 var element_1 = __webpack_require__(202);
 var circuit_1 = __webpack_require__(203);
 var buttonComponent_1 = __webpack_require__(213);
@@ -23638,7 +23692,9 @@ var probe_1 = __webpack_require__(222);
 var resistor_1 = __webpack_require__(223);
 var select_1 = __webpack_require__(224);
 var sline_1 = __webpack_require__(225);
-var helper_1 = __webpack_require__(13);
+var sourcei_1 = __webpack_require__(226);
+var sourcev_1 = __webpack_require__(227);
+var helper_1 = __webpack_require__(10);
 var App = /** @class */ (function (_super) {
     tslib_1.__extends(App, _super);
     function App(props) {
@@ -23661,6 +23717,7 @@ var App = /** @class */ (function (_super) {
             shiftY: 0,
             stroke: const_1.DEFAULT_GRID_STROKE,
             dcLabels: [],
+            dc: false,
         };
         return _this;
     }
@@ -23731,7 +23788,7 @@ var App = /** @class */ (function (_super) {
                                         :
                                             null,
                                     React.createElement(react_konva_1.Layer, null, this.state.dcLabels.map(function (item) {
-                                        return React.createElement(react_konva_1.Text, { text: item.text + "V", x: (item.x - 10 + _this.state.shiftX) * _this.state.scale, y: (item.y - 10 + _this.state.shiftY) * _this.state.scale, fontSize: 20 * _this.state.scale, stroke: "red", fill: "white" });
+                                        return React.createElement(react_konva_1.Text, { text: item.text + "V", x: (item.x - 5 + _this.state.shiftX) * _this.state.scale, y: (item.y - 5 + _this.state.shiftY) * _this.state.scale, fontSize: 10 * _this.state.scale, stroke: "red", fill: "white" });
                                     }))))),
                         React.createElement("td", { className: "shematic-menu-right" },
                             React.createElement("div", { className: "shematic-button-component" },
@@ -23747,6 +23804,9 @@ var App = /** @class */ (function (_super) {
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: capacitor_1.Capacitor, app: this, scale: 0.8, x: 21, y: 0, comment: "Capacitor", name: "capacitor" }),
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: resistor_1.Resistor, app: this, scale: 0.8, x: 21, y: 0, comment: "Resistor", name: "resistor" })),
                             React.createElement("div", { className: "shematic-button-component" },
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: sourcev_1.SourceV, app: this, scale: 0.8, x: 21, y: 0, comment: "Voltage source", name: "sourcev" }),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: sourcei_1.SourceI, app: this, scale: 0.8, x: 21, y: 0, comment: "Current source", name: "sourcei" })),
+                            React.createElement("div", { className: "shematic-button-component" },
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: inductor_1.Inductor, app: this, scale: 0.8, x: 21, y: 0, comment: "Inductor", name: "inductor" })))),
                     React.createElement("tr", null,
                         React.createElement("td", { colSpan: 3 },
@@ -23761,10 +23821,10 @@ var App = /** @class */ (function (_super) {
         // });
         return this.state.cards;
     };
-    App.prototype.createCard = function () {
+    App.prototype.createCard = function (element) {
         var _this = this;
         var index = this.state.cards.length;
-        this.state.cards.push(React.createElement(card_1.Card, { x: 150, y: 150, onCloseClick: function () { ArrayRemove(_this.state.cards, index); _this.setState({}); } }));
+        this.state.cards.push(React.createElement(card_1.Card, { component: element.component, x: 150, y: 150, onCloseClick: function () { ArrayRemove(_this.state.cards, index); _this.setState({}); } }));
         this.setState({});
     };
     App.prototype.renderElements = function () {
@@ -23806,10 +23866,16 @@ var App = /** @class */ (function (_super) {
                 case "sline":
                     ElClass = sline_1.SLine;
                     break;
+                case "sourcev":
+                    ElClass = sourcev_1.SourceV;
+                    break;
+                case "sourcei":
+                    ElClass = sourcei_1.SourceI;
+                    break;
                 default:
                     throw new Error("undestend type");
             }
-            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY }));
+            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this, element), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY, app: _this, dc: _this.state.dc }));
             return elclass;
         });
     };
@@ -23987,12 +24053,12 @@ var App = /** @class */ (function (_super) {
                 if (element.rotation === 360) {
                     element.rotation = 0;
                 }
-                element.component.getPoints().forEach(function (conection) {
-                    var temp = helper_1.RotatePoint(conection.x, conection.y, element.rotation);
-                    conection.x = temp.x;
-                    conection.y = temp.y;
-                    console.log(conection.x, conection.y);
-                });
+                // element.component.getPoints().forEach((conection) => {
+                //     const temp = RotatePoint(conection.x, conection.y, element.rotation);
+                //     conection.x = temp.x;
+                //     conection.y = temp.y;
+                //     console.log(conection.x, conection.y);
+                // });
             }
         });
         this.setState({});
@@ -24103,18 +24169,17 @@ var App = /** @class */ (function (_super) {
             return;
         }
         // run the analysis
-        var operating_point = ckt.dc();
-        console.log(operating_point);
-        if (operating_point !== undefined) {
+        this.operating_point = ckt.dc();
+        if (this.operating_point !== undefined) {
             // save a copy of the results for submission
             var dc_results = {};
             this.state.dcLabels = [];
             var _loop_1 = function (i) {
-                dc_results[i] = operating_point[i];
+                dc_results[i] = this_1.operating_point[i];
                 this_1.state.elements.filter(function (item) { return item.component.type !== "w"; }).some(function (item) {
                     return item.component.getPoints().some(function (point) {
                         if (point.label == i) {
-                            _this.state.dcLabels.push({ text: operating_point[i].toString(), x: point.x, y: point.y });
+                            _this.state.dcLabels.push({ text: _this.operating_point[i].toString(), x: point.x, y: point.y });
                             return true;
                         }
                         return false;
@@ -24122,19 +24187,18 @@ var App = /** @class */ (function (_super) {
                 });
             };
             var this_1 = this;
-            for (var i in operating_point) {
+            for (var i in this.operating_point) {
                 _loop_1(i);
             }
             // display results on diagram
             // this.redraw();
-            this.setState({});
+            this.setState({ dc: true });
         }
     };
     App.prototype.extractCircuit = function () {
         // give all the circuit nodes a name, extract netlist
         helper_1.prepare(this.state.elements);
         var netlist = this.json(this.state.elements);
-        console.log(netlist);
         // // since we've done the heavy lifting, update input field value
         // // so user can grab diagram if they want
         // this.input.value = JSON.stringify(netlist);
@@ -42457,7 +42521,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 
 
-var emptyFunction = __webpack_require__(11);
+var emptyFunction = __webpack_require__(12);
 var invariant = __webpack_require__(1);
 var ReactPropTypesSecret = __webpack_require__(40);
 
@@ -42523,7 +42587,7 @@ module.exports = function() {
 
 
 
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var factory = __webpack_require__(64);
 
 if (typeof React === 'undefined') {
@@ -42551,9 +42615,9 @@ module.exports = factory(
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var const_1 = __webpack_require__(38);
+var const_1 = __webpack_require__(31);
 var Grid = /** @class */ (function (_super) {
     tslib_1.__extends(Grid, _super);
     function Grid(props) {
@@ -42910,6 +42974,7 @@ var Circuit = /** @class */ (function () {
         }
         // find the operating point
         var iterations = this.find_solution(load_dc, const_1.dc_max_iters);
+        console.log("iterations " + iterations);
         if (typeof iterations === "undefined") {
             // too many iterations
             if (this.current_sources.length > 0) {
@@ -43673,6 +43738,7 @@ function mat_solve_rq(M, rhs) {
     var scale;
     var Nr = M.length; // Number of rows
     var Nc = M[0].length; // Number of columns
+    console.log("tut");
     // Copy the rhs in to the last column of M if one is given.
     if (rhs != null) {
         for (var row = Nr - 1; row >= 0; --row) {
@@ -44318,9 +44384,9 @@ exports.VSource = VSource;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var const_1 = __webpack_require__(38);
+var const_1 = __webpack_require__(31);
 var ButtonComponent = /** @class */ (function (_super) {
     tslib_1.__extends(ButtonComponent, _super);
     function ButtonComponent(props) {
@@ -44331,7 +44397,7 @@ var ButtonComponent = /** @class */ (function (_super) {
     ButtonComponent.prototype.render = function () {
         var _this = this;
         return (React.createElement("div", { onMouseOver: function () { _this.props.app.showComment(_this.props.comment + const_1.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT); }, onMouseOut: function () { _this.props.app.showComment(""); }, onClick: function () { _this.props.app.onNewElement(_this.props.name); } },
-            React.createElement(react_konva_1.Stage, { width: 42, height: 42 }, React.createElement(this.props.component, { scale: this.props.scale, x: this.props.x, y: this.props.y, stroke: "blue" }))));
+            React.createElement(react_konva_1.Stage, { width: 42, height: 42 }, React.createElement(this.props.component, { offText: true, scale: this.props.scale, x: this.props.x, y: this.props.y, stroke: "blue" }))));
     };
     return ButtonComponent;
 }(React.Component));
@@ -44346,24 +44412,43 @@ exports.ButtonComponent = ButtonComponent;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var Capacitor = /** @class */ (function (_super) {
     tslib_1.__extends(Capacitor, _super);
     function Capacitor(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "c";
-        _this.c = "1p";
-        _this.c = _this.props.c ? _this.props.c : _this.c;
-        _this.state = {};
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            c: {
+                label: "C:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            name: "",
+            c: "1p",
+        };
         return _this;
     }
+    Capacitor.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     Capacitor.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, c: this.c, _json_: index },
+            { name: this.state.name, c: this.state.c, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     Capacitor.prototype.getPoints = function () {
@@ -44383,7 +44468,13 @@ var Capacitor = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 26, 0, 48] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -8, y: 0, width: 16, height: 48, onMouseDown: this.props.onClick }),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.c && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.c + "F", x: 9, y: 24, fontSize: 10, fill: "black" }) :
+                null,
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: -59, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
     };
     return Capacitor;
 }(React.Component));
@@ -44398,7 +44489,7 @@ exports.Capacitor = Capacitor;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var icon_1 = __webpack_require__(91);
 var Card = /** @class */ (function (_super) {
     tslib_1.__extends(Card, _super);
@@ -44407,14 +44498,48 @@ var Card = /** @class */ (function (_super) {
         _this.state = {};
         return _this;
     }
+    Card.prototype.renderProperties = function () {
+        var properties = [];
+        var componentProps = this.props.component.getProperties();
+        for (var key in componentProps) {
+            var prop = componentProps[key];
+            if (prop.type === "text") {
+                var jsxProperty = (React.createElement("div", null,
+                    React.createElement("label", null, prop.label),
+                    React.createElement("input", { ref: key, defaultValue: prop.value })));
+                properties.push(jsxProperty);
+            }
+            else if (prop.type === "select") {
+                var jsxProperty = (React.createElement("div", null,
+                    React.createElement("label", null, prop.label),
+                    React.createElement("select", { ref: key, defaultValue: prop.value }, prop.items.map(function (item) {
+                        return React.createElement("option", { value: item }, item);
+                    }))));
+                properties.push(jsxProperty);
+            }
+        }
+        return properties;
+    };
     Card.prototype.render = function () {
         return (React.createElement("div", { className: "shematic-card-property", draggable: true, onDragEnd: this.props.onDragEnd, style: { top: this.props.x, left: this.props.y } },
             React.createElement("div", null, "Edit Property"),
+            this.renderProperties(),
             React.createElement("div", null,
-                React.createElement("div", { onClick: this.props.onCloseClick },
+                React.createElement("div", { onClick: this.onOkClick.bind(this) },
                     React.createElement(icon_1.Icon, { name: "done" })),
                 React.createElement("div", { onClick: this.props.onCloseClick },
                     React.createElement(icon_1.Icon, { name: "cancel" })))));
+    };
+    Card.prototype.onOkClick = function (e) {
+        var state = {};
+        for (var key in this.refs) {
+            var domElement = this.refs[key];
+            state[key] = domElement.value;
+        }
+        this.props.component.setState(state);
+        if (this.props.onCloseClick) {
+            this.props.onCloseClick(e);
+        }
     };
     return Card;
 }(React.Component));
@@ -44429,27 +44554,53 @@ exports.Card = Card;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var Diode = /** @class */ (function (_super) {
     tslib_1.__extends(Diode, _super);
     function Diode(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "d";
-        _this.area = "1";
-        _this.area = _this.props.area ? _this.props.area : _this.area;
-        _this.state = {};
+        // this.area = this.state.area ? this.state.area : this.area;
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            type: {
+                label: "Type:",
+                type: "select",
+                items: ["normal", "ideal"],
+            },
+            area: {
+                label: "Area:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            area: "1",
+            type: "normal",
+            name: "",
+        };
         return _this;
     }
     Diode.prototype.getPoints = function () {
         return [this.refs.con1, this.refs.con2];
     };
+    Diode.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     Diode.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, area: this.area, _json_: index },
+            { name: this.state.name, area: this.state.area, type: this.state.type, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     Diode.prototype.render = function () {
@@ -44463,11 +44614,17 @@ var Diode = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 18, 8, 18, 0, 30, -8, 18] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 30, 8, 30] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 30, 0, 48] }, argsLine)),
-            (this.props.type === "ideal") ?
+            (this.state.type === "ideal") ?
                 React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-10, 12, 10, 12, 10, 36, -10, 36, -10, 12] }, argsLine)) : null,
             React.createElement(react_konva_1.Rect, { x: -10, y: 0, width: 16, height: 48, onMouseDown: this.props.onClick }),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.area && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.area, x: 10, y: 24, fontSize: 10, fill: "black" }) :
+                null,
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: -60, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
     };
     return Diode;
 }(React.Component));
@@ -44482,25 +44639,34 @@ exports.Diode = Diode;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var Ground = /** @class */ (function (_super) {
     tslib_1.__extends(Ground, _super);
     function Ground(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "g";
+        _this.properties = {};
         _this.state = {};
         return _this;
     }
+    Ground.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     Ground.prototype.getPoints = function () {
         return [this.refs.con1];
     };
     Ground.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, _json_: index },
+            { _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     Ground.prototype.render = function () {
@@ -44530,27 +44696,46 @@ exports.Ground = Ground;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var Inductor = /** @class */ (function (_super) {
     tslib_1.__extends(Inductor, _super);
     function Inductor(props) {
         var _this = _super.call(this, props) || this;
-        _this.type = "i";
-        _this.l = "1n";
-        _this.l = _this.props.l ? _this.props.l : _this.l;
-        _this.state = {};
+        _this.type = "l";
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            l: {
+                label: "L:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            l: "1n",
+            name: "",
+        };
         return _this;
     }
+    Inductor.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     Inductor.prototype.getPoints = function () {
         return [this.refs.con1, this.refs.con2];
     };
     Inductor.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, l: this.l, _json_: index },
+            { name: this.state.name, l: this.state.l, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     Inductor.prototype.render = function () {
@@ -44565,17 +44750,15 @@ var Inductor = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Arc, tslib_1.__assign({ x: 0, y: 24, angle: 250, innerRadius: 4, outerRadius: 4, rotation: 240 }, argsLine)),
             React.createElement(react_konva_1.Arc, tslib_1.__assign({ x: 0, y: 30, angle: 220, innerRadius: 4, outerRadius: 4, rotation: 235 }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 34, 0, 48] }, argsLine)),
-            this.props.l ?
-                React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 8, y: 24, text: this.props.l + "H", fontSize: 3 }, argsText))
-                :
-                    null,
-            this.props.name ?
-                React.createElement(react_konva_1.Text, tslib_1.__assign({ x: -6, y: 24, text: this.props.name, fontSize: 5 }, argsText))
-                :
-                    null,
             React.createElement(react_konva_1.Rect, { x: -5, y: 0, width: 9, height: 48, onMouseDown: this.props.onClick }),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.l && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.l + "H", x: 8, y: 24, fontSize: 10, fill: "black" }) :
+                null,
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: -56, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
     };
     return Inductor;
 }(React.Component));
@@ -44590,27 +44773,46 @@ exports.Inductor = Inductor;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var NFet = /** @class */ (function (_super) {
     tslib_1.__extends(NFet, _super);
     function NFet(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "n";
-        _this.wl = "2";
-        _this.wl = _this.props.wl ? _this.props.wl : _this.wl;
-        _this.state = {};
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            wl: {
+                label: "WL:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            wl: "2",
+            name: "",
+        };
         return _this;
     }
+    NFet.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     NFet.prototype.getPoints = function () {
         return [this.refs.con1, this.refs.con2, this.refs.con3];
     };
     NFet.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, WL: this.wl, _json_: index },
+            { name: this.state.name, WL: this.state.wl, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     NFet.prototype.render = function () {
@@ -44630,7 +44832,15 @@ var NFet = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Rect, { x: -24, y: 0, width: 28, height: 48, onMouseDown: this.props.onClick }),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 0, ref: "con1" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, parent: this, y: 24, ref: "con2" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 48, ref: "con3" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 48, ref: "con3" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            !this.props.offText ?
+                this.state.name && !this.props.offText ?
+                    [React.createElement(react_konva_1.Text, { text: this.state.name, x: 2, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }),
+                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 28, fontSize: 10, fill: "black", width: 50, align: "right" })]
+                    :
+                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" })
+                :
+                    null));
     };
     return NFet;
 }(React.Component));
@@ -44645,27 +44855,46 @@ exports.NFet = NFet;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var OpAmp = /** @class */ (function (_super) {
     tslib_1.__extends(OpAmp, _super);
     function OpAmp(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "o";
-        _this.A = "3000";
-        _this.A = _this.props.A ? _this.props.A : _this.A;
-        _this.state = {};
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            A: {
+                label: "A:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            A: "30000",
+            name: "",
+        };
         return _this;
     }
+    OpAmp.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     OpAmp.prototype.getPoints = function () {
         return [this.refs.con1, this.refs.con2, this.refs.con3, this.refs.con4];
     };
     OpAmp.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, A: this.A, _json_: index },
+            { name: this.state.name, A: this.A, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     OpAmp.prototype.render = function () {
@@ -44688,7 +44917,10 @@ var OpAmp = /** @class */ (function (_super) {
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 16, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 48, y: 8, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 24, y: 16, ref: "con4", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 24, y: 16, ref: "con4", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: 24, y: -8, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
     };
     return OpAmp;
 }(React.Component));
@@ -44703,27 +44935,46 @@ exports.OpAmp = OpAmp;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var PFet = /** @class */ (function (_super) {
     tslib_1.__extends(PFet, _super);
     function PFet(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "p";
-        _this.wl = "2";
-        _this.wl = _this.props.wl ? _this.props.wl : _this.wl;
-        _this.state = {};
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            wl: {
+                label: "WL:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            wl: "2",
+            name: "",
+        };
         return _this;
     }
+    PFet.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     PFet.prototype.getPoints = function () {
         return [this.refs.con1, this.refs.con2, this.refs.con3];
     };
     PFet.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, WL: this.wl, _json_: index },
+            { name: this.state.name, WL: this.state.wl, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     PFet.prototype.render = function () {
@@ -44741,17 +44992,18 @@ var PFet = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-24, 24, -16, 24] }, argsLine)),
             React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: -14, y: 24, radius: 2 }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-12, 16, -12, 32] }, argsLine)),
-            this.props.name ?
-                [
-                    React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 2, y: 22, text: this.props.name, fontSize: 6 }, argsText)),
-                    React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 2, y: 26, text: this.props.wl, fontSize: 0 }, argsText)),
-                ]
-                :
-                    React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 2, y: 24, text: this.props.wl, fontSize: 3 }, argsText)),
             React.createElement(react_konva_1.Rect, { x: -24, y: 0, width: 28, height: 48, onMouseDown: this.props.onClick }),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, y: 24, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            !this.props.offText ?
+                this.state.name && !this.props.offText ?
+                    [React.createElement(react_konva_1.Text, { text: this.state.name, x: 2, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }),
+                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 28, fontSize: 10, fill: "black", width: 50, align: "right" })]
+                    :
+                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" })
+                :
+                    null));
     };
     return PFet;
 }(React.Component));
@@ -44766,26 +45018,48 @@ exports.PFet = PFet;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var Probe = /** @class */ (function (_super) {
     tslib_1.__extends(Probe, _super);
     function Probe(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "s";
-        _this.color = "magenta";
-        _this.offset = "0";
-        _this.color = _this.props.color ? _this.props.color : _this.color;
-        _this.offset = (_this.props.offset === undefined || _this.props.offset === "") ? _this.offset : _this.props.offset;
-        _this.state = {};
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            offset: {
+                label: "Offset:",
+                type: "text",
+            },
+            color: {
+                label: "Color:",
+                type: "select",
+                items: ["red", "green", "blue", "cyan", "magenta", "yellow", "black"],
+            },
+        };
+        _this.state = {
+            color: "cyan",
+            offset: "0",
+        };
         return _this;
     }
+    Probe.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     Probe.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, color: this.color, offset: this.offset, _json_: index },
+            { color: this.state.color, offset: this.state.offset, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     Probe.prototype.getPoints = function () {
@@ -44798,6 +45072,7 @@ var Probe = /** @class */ (function (_super) {
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
+            React.createElement(react_konva_1.Rect, { x: 6, y: -2, width: 6, height: 21, fill: this.state.color, rotation: 225 }),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 4, -4] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [2, -6, 6, -2] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [2, -6, 17, -21] }, argsLine)),
@@ -44820,24 +45095,43 @@ exports.Probe = Probe;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var Resistor = /** @class */ (function (_super) {
     tslib_1.__extends(Resistor, _super);
     function Resistor(props) {
         var _this = _super.call(this, props) || this;
         _this.type = "r";
-        _this.r = "1";
-        _this.r = _this.props.r ? _this.props.r : _this.r;
-        _this.state = {};
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            r: {
+                label: "R:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            r: "1",
+            name: "",
+        };
         return _this;
     }
+    Resistor.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
     Resistor.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.props.name, r: this.r, _json_: index },
+            { name: this.state.name, r: this.state.r, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     Resistor.prototype.getPoints = function () {
@@ -44859,17 +45153,15 @@ var Resistor = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [4, 30, -4, 34] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-4, 34, 0, 36] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 36, 0, 48] }, argsLine)),
-            this.props.r ?
-                React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 8, y: 24, text: this.props.r + "\u03A9", fontSize: 3 }, argsText))
-                :
-                    null,
-            this.props.name ?
-                React.createElement(react_konva_1.Text, tslib_1.__assign({ x: -8, y: 24, text: this.props.name, fontSize: 5 }, argsText))
-                :
-                    null,
             React.createElement(react_konva_1.Rect, { x: -5, y: 0, width: 10, height: 48, onMouseDown: this.props.onClick }),
             React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.r && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.c, x: 8, y: 24, fontSize: 10, fill: "black" }) :
+                null,
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: -58, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
     };
     return Resistor;
 }(React.Component));
@@ -44884,7 +45176,7 @@ exports.Resistor = Resistor;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
 var Select = /** @class */ (function (_super) {
     tslib_1.__extends(Select, _super);
@@ -44910,10 +45202,10 @@ exports.Select = Select;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(4);
-var React = __webpack_require__(7);
+var React = __webpack_require__(6);
 var react_konva_1 = __webpack_require__(9);
-var helper_1 = __webpack_require__(13);
-var connection_point_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
 var SLine = /** @class */ (function (_super) {
     tslib_1.__extends(SLine, _super);
     function SLine(props) {
@@ -44943,6 +45235,186 @@ var SLine = /** @class */ (function (_super) {
     return SLine;
 }(React.Component));
 exports.SLine = SLine;
+
+
+/***/ }),
+/* 226 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
+var SourceI = /** @class */ (function (_super) {
+    tslib_1.__extends(SourceI, _super);
+    function SourceI(props) {
+        var _this = _super.call(this, props) || this;
+        _this.type = "i";
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            value: {
+                label: "Value:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            value: "dc(1)",
+            name: "",
+        };
+        return _this;
+    }
+    SourceI.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
+    SourceI.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
+    SourceI.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.state.name, value: this.state.value, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    SourceI.prototype.render = function () {
+        var _this = this;
+        this.bundle = helper_1.PrepareBundle(-12, 0, 24, 48, this.props);
+        var argsText = helper_1.PrepareTextProps(this.props);
+        var argsLine = helper_1.PrepareLineProps(this.props);
+        var argsCommon = helper_1.PrepareCommonProps(this.props);
+        return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 12] }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 36, 0, 48] }, argsLine)),
+            React.createElement(react_konva_1.Circle, tslib_1.__assign({ radius: 12, x: 0, y: 24 }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 15, 0, 32] }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-3, 26, 0, 32] }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [3, 26, 0, 32] }, argsLine)),
+            React.createElement(react_konva_1.Rect, { x: -12, y: 0, width: 24, height: 48, onMouseDown: this.props.onClick }),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.value && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.value, x: 16, y: 24, fontSize: 10, fill: "black" }) :
+                null,
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: -66, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
+    };
+    return SourceI;
+}(React.Component));
+exports.SourceI = SourceI;
+
+
+/***/ }),
+/* 227 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(4);
+var React = __webpack_require__(6);
+var react_konva_1 = __webpack_require__(9);
+var const_1 = __webpack_require__(31);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(14);
+var SourceV = /** @class */ (function (_super) {
+    tslib_1.__extends(SourceV, _super);
+    function SourceV(props) {
+        var _this = _super.call(this, props) || this;
+        _this.type = "v";
+        _this.properties = {
+            name: {
+                label: "Name:",
+                type: "text",
+            },
+            value: {
+                label: "Value:",
+                type: "text",
+            },
+        };
+        _this.state = {
+            value: "dc(1)",
+            name: "",
+        };
+        return _this;
+    }
+    SourceV.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
+    SourceV.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
+    SourceV.prototype.json = function (index) {
+        this.jsonIndex = index;
+        console.log("json", this.jsonIndex);
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { name: this.state.name, value: this.state.value, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    SourceV.prototype.DisplayCurrent = function () {
+        var name = this.state.name;
+        var label = "I(" + (name ? name : "_" + this.jsonIndex) + ")";
+        var v = this.props.app.operating_point[label];
+        console.log("DisplayCurrent", this.jsonIndex);
+        console.log("DisplayCurrent", v, this.props.app.operating_point);
+        console.log("DisplayCurrent 2", name, label);
+        console.log("DisplayCurrent 3", this.state.name);
+        if (v !== undefined) {
+            // display the element current 
+            var i = helper_1.EngineeringNotation(v, 2) + "A";
+            var result = [
+                React.createElement(react_konva_1.Text, { x: -5, y: 5, text: i, fontSize: 10, stroke: "red", fill: "white" }),
+                React.createElement(react_konva_1.Line, { points: [-3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+                React.createElement(react_konva_1.Line, { points: [3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+            ];
+            // delete this.props.app!.operating_point![label];
+            return result;
+        }
+    };
+    SourceV.prototype.render = function () {
+        var _this = this;
+        this.bundle = helper_1.PrepareBundle(-12, 0, 24, 48, this.props);
+        var argsText = helper_1.PrepareTextProps(this.props);
+        var argsLine = helper_1.PrepareLineProps(this.props);
+        var argsCommon = helper_1.PrepareCommonProps(this.props);
+        return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 12] }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 36, 0, 48] }, argsLine)),
+            React.createElement(react_konva_1.Circle, tslib_1.__assign({ radius: 12, x: 0, y: 24 }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 15, 0, 21] }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-3, 18, 3, 18] }, argsLine)),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-3, 30, 3, 30] }, argsLine)),
+            React.createElement(react_konva_1.Rect, { x: -12, y: 0, width: 24, height: 48, onMouseDown: this.props.onClick }),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.props.dc ? this.DisplayCurrent() : null,
+            this.state.value && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.value, x: 16, y: 24, fontSize: 10, fill: "black" }) :
+                null,
+            this.state.name && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.name, x: -66, y: 24, fontSize: 10, fill: "black", width: 50, align: "right" }) :
+                null));
+    };
+    return SourceV;
+}(React.Component));
+exports.SourceV = SourceV;
 
 
 /***/ })
