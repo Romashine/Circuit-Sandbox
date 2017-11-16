@@ -1616,6 +1616,31 @@ function ArrayMin(a) {
     return min;
 }
 exports.ArrayMin = ArrayMin;
+// t is the time at which we want a value
+// times is a list of timepoints from the simulation
+function Interpolate(t, times, values) {
+    if (values === undefined) {
+        return undefined;
+    }
+    for (var i = 0; i < times.length; i++) {
+        if (t < times[i]) {
+            // t falls between times[i-1] and times[i]
+            var t1 = (i === 0) ? times[0] : times[i - 1];
+            var t2 = times[i];
+            if (t2 === undefined) {
+                return undefined;
+            }
+            var v1 = (i === 0) ? values[0] : values[i - 1];
+            var v2 = values[i];
+            var v = v1;
+            if (t !== t1) {
+                v += (t - t1) * (v2 - v1) / (t2 - t1);
+            }
+            return v;
+        }
+    }
+}
+exports.Interpolate = Interpolate;
 // given a range of values, return a new range [vmin',vmax'] where the limits
 // have been chosen "nicely".  Taken from matplotlib.ticker.LinearLocator
 function ViewLimits(vmin, vmax) {
@@ -7961,21 +7986,20 @@ var Dialog = /** @class */ (function (_super) {
         this.setState({ zIndex: getZIndex() });
     };
     Dialog.prototype.render = function () {
-        _super.prototype.render;
-        var label = this.props.label;
-        var _a = this.state, hidden = _a.hidden, zIndex = _a.zIndex, x = _a.x, y = _a.y;
+        var _a = this.props, label = _a.label, onMouseDown = _a.onMouseDown;
+        var _b = this.state, hidden = _b.hidden, zIndex = _b.zIndex, x = _b.x, y = _b.y;
         return (React.createElement(react_draggable_1.default, { handle: "header" },
             React.createElement("div", { className: "schematic-dialog", hidden: hidden, tabIndex: -1, style: {
                     left: x,
                     top: y,
                     zIndex: zIndex,
-                }, onFocus: this.onFocus },
-                React.createElement("header", { className: "schematic-dialog-header" },
+                }, onFocus: this.onFocus, onMouseDown: onMouseDown },
+                React.createElement("header", { className: "schematic-dialog-header", onMouseDown: onMouseDown },
                     React.createElement("span", { className: "schematic-dialog-label" }, label),
                     React.createElement("span", { className: "schematic-dialog-close", onClick: this.onCloseClick },
                         React.createElement(icon_1.Icon, { name: "close" }))),
-                React.createElement("div", { className: "schematic-dialog-content" }, this.renderContent()),
-                React.createElement("footer", { className: "schematic-dialog-footer" }, this.renderFooter()))));
+                React.createElement("div", { className: "schematic-dialog-content", onMouseDown: onMouseDown }, this.renderContent()),
+                React.createElement("footer", { className: "schematic-dialog-footer", onMouseDown: onMouseDown }, this.renderFooter()))));
     };
     Dialog.prototype.renderContent = function () {
         return null;
@@ -7990,7 +8014,6 @@ var Dialog = /** @class */ (function (_super) {
         e.stopPropagation();
         this.focus();
         if (this.props.onFocus) {
-            console.log("попал в фокус");
             this.props.onFocus(e);
         }
     };
@@ -23982,13 +24005,13 @@ var App = /** @class */ (function (_super) {
     App.prototype.createCard = function (element, e) {
         var _this = this;
         var index = this.state.cards.length;
-        var card = (React.createElement(card_1.Card, { label: "Edit properties " + element.component.constructor.name, component: element.component, x: e.evt.pageX, y: e.evt.pageY, onClose: function () { ArrayRemove(_this.state.cards, index); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
+        var card = (React.createElement(card_1.Card, { label: "Edit properties " + element.component.constructor.name, component: element.component, x: e.evt.pageX, y: e.evt.pageY, onClose: function () { ArrayRemove(_this.state.cards, index); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); }, onMouseDown: function () { _this.unselectAll(); _this.setState({}); } }));
         this.state.cards.push(card);
         this.setState({});
     };
     App.prototype.createCardACInput = function (cb) {
         var _this = this;
-        this.state.cards.push(React.createElement(cardacinput_1.CardACInput, { label: "AC analysis", x: 100, y: 100, ac_fstart: this.ac_fstart, ac_fstop: this.ac_fstop, ac_source_name: this.ac_source_name, onOkClick: cb, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
+        this.state.cards.push(React.createElement(cardacinput_1.CardACInput, { label: "AC analysis", x: 100, y: 100, ac_fstart: this.ac_fstart, ac_fstop: this.ac_fstop, ac_source_name: this.ac_source_name, onOkClick: cb, onMouseDown: function () { _this.unselectAll(); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
         this.setState({});
     };
     App.prototype.renderElements = function () {
@@ -24408,7 +24431,7 @@ var App = /** @class */ (function (_super) {
                         // for each requested freq, interpolate response value
                         for (var k = 1; k < flist.length; k++) {
                             var f = flist[k];
-                            var v = interpolate(f, x_values, values);
+                            var v = helper_1.Interpolate(f, x_values, values);
                             // convert to dB
                             fvlist.push([f, v === undefined ? "undefined" : 20.0 * Math.log(v) / Math.LN10]);
                         }
