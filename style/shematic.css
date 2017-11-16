@@ -101,3 +101,10 @@
     width: 196px;
     z-index: 1000;
 }
+
+.shematic-graf-property{
+    position: absolute;
+    border: 1px solid grey;
+    background-color: rgb(246, 247, 247);
+
+}
