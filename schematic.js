@@ -1390,33 +1390,36 @@ function PrepareCommonProps(props) {
     };
 }
 exports.PrepareCommonProps = PrepareCommonProps;
-function RotatePoint(x, y, rotate) {
-    var temp;
+function RotatePointX(x, y, rotate) {
     if (rotate === 90) {
-        temp = x;
-        return {
-            x: -y,
-            y: temp,
-        };
+        return x = -y;
     }
     else if (rotate === 180) {
-        return {
-            x: -x,
-            y: -y,
-        };
+        return x = -x;
     }
     else if (rotate === 270) {
-        temp = -x;
-        return {
-            x: y,
-            y: temp,
-        };
+        return x = y;
     }
     else {
-        return { x: x, y: y };
+        return x;
     }
 }
-exports.RotatePoint = RotatePoint;
+exports.RotatePointX = RotatePointX;
+function RotatePointY(x, y, rotate) {
+    if (rotate === 90) {
+        return y = x;
+    }
+    else if (rotate === 180) {
+        return y = -y;
+    }
+    else if (rotate === 270) {
+        return y = -x;
+    }
+    else {
+        return y;
+    }
+}
+exports.RotatePointY = RotatePointY;
 function PrepareBundle(x, y, width, height, props) {
     if (props.rotation === 0) {
         return {
@@ -1487,7 +1490,7 @@ function prepare(lines) {
         }
     });
     // console.log(JSON.stringify(lines, null, "  "));
-    console.log(lines.map((function (line) { return (line.component.type || "w") + " l:" + line.label + " con:[" + line.component.getPoints().map(function (con) { return con.x + "." + con.y + "-" + con.label; }).join("; ") + "]"; })));
+    // console.log(lines.map(((line) => `${line.component.type || "w"} l:${line.label} con:[${line.component.getPoints().map((con) => `${con.x}.${con.y}-${con.label}`).join("; ")}]`)));
 }
 exports.prepare = prepare;
 function prepareGround(lines) {
@@ -1514,16 +1517,16 @@ function prepareAllConection(line, label) {
         }
     });
 }
-function lineConnectionIndex(line, connection) {
+function lineConnectionIndex(line, parentCon, connection) {
     var fIndex = -1;
     return line.component.getPoints().some(function (item, index) {
         fIndex = index;
-        return (item.x === connection.x && item.y === connection.y);
+        return (line.x + item.rx === parentCon.x + connection.rx && line.y + item.ry === parentCon.y + connection.ry);
     }) ? fIndex : -1;
 }
-function prepareConnection(lines, connection, label) {
+function prepareConnection(lines, parentCon, connection, label) {
     lines.forEach(function (line) {
-        var index = lineConnectionIndex(line, connection);
+        var index = lineConnectionIndex(line, parentCon, connection);
         if (index !== -1) {
             // line with the same connection
             line.component.getPoints()[index].label = label;
@@ -1537,7 +1540,7 @@ function prepareLine(lines, line, label) {
     line.label = label;
     line.component.getPoints().forEach(function (connection) {
         if (connection.label === undefined) {
-            prepareConnection(lines, connection, label);
+            prepareConnection(lines, line, connection, label);
         }
     });
 }
@@ -2136,6 +2139,8 @@ var ConnectionPoint = /** @class */ (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.x = 0;
         _this.y = 0;
+        _this.rx = helper_1.RotatePointX(_this.props.x, _this.props.y, _this.props.rotation);
+        _this.ry = helper_1.RotatePointY(_this.props.x, _this.props.y, _this.props.rotation);
         _this.state = {};
         return _this;
     }
@@ -2144,7 +2149,9 @@ var ConnectionPoint = /** @class */ (function (_super) {
         var argsLine = helper_1.PrepareLineProps(this.props);
         this.x = this.props.x + this.props.parent.props.x;
         this.y = this.props.y + this.props.parent.props.y;
-        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.props.x, _this.props.y); } })));
+        this.rx = helper_1.RotatePointX(this.props.x, this.props.y, this.props.rotation);
+        this.ry = helper_1.RotatePointY(this.props.x, this.props.y, this.props.rotation);
+        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } })));
     };
     return ConnectionPoint;
 }(React.Component));
@@ -23970,9 +23977,9 @@ var App = /** @class */ (function (_super) {
                                         React.createElement(select_1.Select, { x: this.state.selectRect.x, y: this.state.selectRect.y, width: this.state.selectRect.width, height: this.state.selectRect.height })
                                         :
                                             null,
-                                    React.createElement(react_konva_1.Layer, null, this.state.dcLabels.map(function (item) {
+                                    React.createElement(react_konva_1.Layer, null, this.state.dcLabels ? this.state.dcLabels.map(function (item) {
                                         return React.createElement(react_konva_1.Text, { text: item.text + "V", x: (item.x - 5 + _this.state.shiftX) * _this.state.scale, y: (item.y - 5 + _this.state.shiftY) * _this.state.scale, fontSize: 10 * _this.state.scale, stroke: "red", fill: "white" });
-                                    }))))),
+                                    }) : null)))),
                         React.createElement("td", { className: "shematic-menu-right" },
                             React.createElement("div", { className: "shematic-button-component" },
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: opamp_1.OpAmp, app: this, scale: 0.8, x: 0, y: 18, comment: "OpAmp", name: "opamp" }),
@@ -24077,6 +24084,7 @@ var App = /** @class */ (function (_super) {
     App.prototype.onMouseDown = function (e) {
         var _this = this;
         var el;
+        this.deleteLabel();
         if (this.state.elements.some(function (element) {
             var bundle = element.component.bundle;
             var x = (e.nativeEvent.offsetX / _this.state.scale - _this.state.shiftX);
@@ -24301,6 +24309,7 @@ var App = /** @class */ (function (_super) {
     App.prototype.onConnectorMouseDown = function (e, layerX, layerY) {
         e.evt.stopPropagation();
         this.unselectAll();
+        this.deleteLabel();
         this.setState({
             selectRect: undefined,
             line: {
@@ -24357,10 +24366,19 @@ var App = /** @class */ (function (_super) {
             this.dc_max_iters]);
         return json;
     };
+    App.prototype.deleteLabel = function () {
+        if (this.state.dcLabels) {
+            this.setState({
+                dc: false,
+                dcLabels: undefined,
+            });
+        }
+    };
     App.prototype.dcAnalysis = function () {
         var _this = this;
         // remove any previous annotations
         this.unselectAll();
+        this.deleteLabel();
         var ckt = this.extractCircuit();
         if (ckt === null) {
             return;
@@ -24377,7 +24395,7 @@ var App = /** @class */ (function (_super) {
                     return item.component.getPoints().some(function (point) {
                         // tslint:disable-next-line:triple-equals
                         if (point.label == i) {
-                            _this.state.dcLabels.push({ text: _this.operating_point[i].toString(), x: point.x, y: point.y });
+                            _this.state.dcLabels.push({ text: _this.operating_point[i].toString(), x: item.x + point.rx, y: item.y + point.ry });
                             return true;
                         }
                         return false;
@@ -44877,15 +44895,19 @@ var Capacitor = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
-        // console.log("Capacitor:", this.props.x, this.props.y);
+        // console.log("Capacitor:", this.refs.con2);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 22] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 22, 8, 22] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 26, 8, 26] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 26, 0, 48] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -8, y: 0, width: 16, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, rotation: this.props.rotation, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) {
+                    _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale));
+                } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, rotation: this.props.rotation, x: 0, y: 48 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) {
+                    _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale));
+                } })),
             this.state.c && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.c + "F", x: 9, y: 20, fontSize: 10, fill: "black" }) :
                 null,
@@ -44912,27 +44934,65 @@ var icon_1 = __webpack_require__(32);
 var Card = /** @class */ (function (_super) {
     tslib_1.__extends(Card, _super);
     function Card(props) {
-        return _super.call(this, props, {}) || this;
+        var _this = _super.call(this, props, {}) || this;
+        _this.componentProps = props.component.getProperties();
+        return _this;
     }
     Card.prototype.renderContent = function () {
+        var _this = this;
         var properties = [];
-        var componentProps = this.props.component.getProperties();
-        for (var key in componentProps) {
-            var prop = componentProps[key];
+        var _loop_1 = function (key) {
+            var prop = this_1.componentProps[key];
             if (prop.type === "text") {
                 var jsxProperty = (React.createElement("div", { key: key, className: "schematic-dialog-prop" },
-                    React.createElement("label", null, prop.label),
+                    React.createElement("label", null,
+                        prop.label,
+                        ":"),
                     React.createElement("input", { ref: "prop-" + key, defaultValue: prop.value })));
                 properties.push(jsxProperty);
             }
             else if (prop.type === "select") {
                 var jsxProperty = (React.createElement("div", { key: key, className: "schematic-dialog-prop" },
-                    React.createElement("label", null, prop.label),
+                    React.createElement("label", null,
+                        prop.label,
+                        ":"),
                     React.createElement("select", { ref: "prop-" + key, defaultValue: prop.value }, prop.items.map(function (item) {
                         return React.createElement("option", { value: item }, item);
                     }))));
                 properties.push(jsxProperty);
             }
+            else if (prop.type === "case") {
+                var caseKey = /(\w+)/.exec(prop.value)[1];
+                var caseProps = prop.cases[caseKey];
+                var caseValuesReg = /\((.*)\)/.exec(prop.value);
+                var caseValues_1 = [];
+                if (caseValuesReg) {
+                    caseValues_1 = caseValuesReg[1].split(",");
+                }
+                var jsxCases = caseProps.map(function (item, index) {
+                    return React.createElement("div", { key: item.label + "-" + index, className: "schematic-dialog-prop" },
+                        React.createElement("label", null,
+                            item.label,
+                            ":"),
+                        React.createElement("input", { ref: "case-type-" + index, defaultValue: caseValues_1.length ? caseValues_1[index] : item.defaultValue }));
+                });
+                var jsxProperty = (React.createElement("div", { key: key, className: "schematic-dialog-prop" },
+                    React.createElement("label", null,
+                        prop.label,
+                        ":"),
+                    React.createElement("select", { ref: "prop-" + key, value: caseKey, onChange: function (e) {
+                            prop.value = e.currentTarget.value;
+                            _this.setState({});
+                        } }, prop.items.map(function (item) {
+                        return React.createElement("option", { value: item }, item);
+                    })),
+                    jsxCases));
+                properties.push(jsxProperty);
+            }
+        };
+        var this_1 = this;
+        for (var key in this.componentProps) {
+            _loop_1(key);
         }
         return properties;
     };
@@ -44950,7 +45010,19 @@ var Card = /** @class */ (function (_super) {
         for (var key in this.refs) {
             if (key.indexOf("prop-") === 0) {
                 var domElement = this.refs[key];
-                state[key.replace(/^prop\-/, "")] = domElement.value;
+                var id = key.replace(/^prop\-/, "");
+                state[id] = domElement.value;
+                if (this.componentProps[id].type === "case") {
+                    state[id] += "(";
+                    var values = [];
+                    for (var key2 in this.refs) {
+                        if (key2.indexOf("case-" + id + "-") === 0) {
+                            var domElement_1 = this.refs[key2];
+                            values.push(domElement_1.value);
+                        }
+                    }
+                    state[id] += values.join(",") + ")";
+                }
             }
         }
         this.props.component.setState(state);
@@ -47747,8 +47819,8 @@ var Diode = /** @class */ (function (_super) {
             (this.state.type === "ideal") ?
                 React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-10, 12, 10, 12, 10, 36, -10, 36, -10, 12] }, argsLine)) : null,
             React.createElement(react_konva_1.Rect, { x: -10, y: 0, width: 16, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             this.state.area && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.area, x: 10, y: 20, fontSize: 10, fill: "black" }) :
                 null,
@@ -48021,7 +48093,7 @@ var GraphOver = /** @class */ (function (_super) {
     }
     GraphOver.prototype.render = function () {
         var graph = this.props.graph;
-        console.log(graph);
+        // console.log(graph);
         var plotCursor = [];
         // do something useful when user mouses over graph
         // canvas.addEventListener("mousemove", graph_mouse_move, false)
@@ -48192,7 +48264,7 @@ var Ground = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-6, 8, 0, 14] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 14, 6, 8] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -6, y: 0, width: 12, height: 14, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", rotation: this.props.rotation, parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Ground;
 }(React.Component));
@@ -48262,8 +48334,8 @@ var Inductor = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Arc, tslib_1.__assign({ x: 0, y: 30, angle: 220, innerRadius: 4, outerRadius: 4, rotation: 235 }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 34, 0, 48] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -5, y: 0, width: 9, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             this.state.l && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.l + "H", x: 8, y: 20, fontSize: 10, fill: "black" }) :
                 null,
@@ -48341,9 +48413,9 @@ var NFet = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-24, 24, -12, 24] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-12, 16, -12, 32] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -24, y: 0, width: 28, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 0, ref: "con1" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, parent: this, y: 24, ref: "con2" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 48, ref: "con3" }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 0, ref: "con1" }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, parent: this, y: 24, ref: "con2" }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, parent: this, y: 48, ref: "con3" }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             !this.props.offText ?
                 this.state.name && !this.props.offText ?
                     [React.createElement(react_konva_1.Text, { text: this.state.name, x: 2, y: 12, fontSize: 10, fill: "black" }),
@@ -48425,10 +48497,10 @@ var OpAmp = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [10, 16, 14, 16] }, argsLine)),
             React.createElement(react_konva_1.Text, tslib_1.__assign({ x: 24, y: -8 }, argsText)),
             React.createElement(react_konva_1.Rect, { x: 0, y: -8, width: 40, height: 32, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 16, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 48, y: 8, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 24, y: 16, ref: "con4", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 16, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 48, y: 8, ref: "con3", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 24, y: 16, ref: "con4", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             this.state.name && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.name, x: 24, y: -8, fontSize: 10, fill: "black" }) :
                 null));
@@ -48504,9 +48576,9 @@ var PFet = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: -14, y: 24, radius: 2 }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-12, 16, -12, 32] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -24, y: 0, width: 28, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, y: 24, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con3", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: -24, y: 24, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con3", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             !this.props.offText ?
                 this.state.name && !this.props.offText ?
                     [React.createElement(react_konva_1.Text, { text: this.state.name, x: 2, y: 12, fontSize: 10, fill: "black" }),
@@ -48600,7 +48672,7 @@ var Probe = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [17, -21, 21, -17] }, argsLine)),
             React.createElement(react_konva_1.Arc, tslib_1.__assign({ x: 19, y: -11, angle: 90, innerRadius: 8, outerRadius: 8, rotation: 270 }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: 0, y: -21, width: 21, height: 21, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return Probe;
 }(React.Component));
@@ -48674,8 +48746,8 @@ var Resistor = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-4, 34, 0, 36] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 36, 0, 48] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -5, y: 0, width: 10, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             this.state.r && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.c, x: 8, y: 20, fontSize: 10, fill: "black" }) :
                 null,
@@ -48749,8 +48821,8 @@ var SLine = /** @class */ (function (_super) {
         var y2 = this.props.endY - this.props.y;
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, x2, y2] }, argsLine, { onMouseDown: this.props.onClick })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, x: x2, y: y2 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, rotation: this.props.rotation, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con2", parent: this, rotation: this.props.rotation, x: x2, y: y2 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))));
     };
     return SLine;
 }(React.Component));
@@ -48773,20 +48845,182 @@ var SourceI = /** @class */ (function (_super) {
     tslib_1.__extends(SourceI, _super);
     function SourceI(props) {
         var _this = _super.call(this, props) || this;
-        _this.type = "i";
+        _this.type = "v";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
-            value: {
-                label: "Value:",
-                type: "text",
+            type: {
+                label: "Type",
+                type: "case",
+                items: ["dc", "impulse", "step", "square", "triangle", "pwl", "pwl_repeating", "pulse", "sin"],
+                cases: {
+                    dc: [
+                        {
+                            label: "DC value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                    ],
+                    impulse: [
+                        {
+                            label: "Height",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Width (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                    ],
+                    step: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Delay until step (secs)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Rise time (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                    ],
+                    square: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Frequency (Hz)",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Duty cycle (%)",
+                            type: "text",
+                            defaultValue: "50",
+                        },
+                    ],
+                    triangle: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Frequency (Hz)",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                    ],
+                    pwl: [
+                        {
+                            label: "Comma-separated list of alternating times and values",
+                            type: "text",
+                            defaultValue: "",
+                        },
+                    ],
+                    pwl_repeating: [
+                        {
+                            label: "Comma-separated list of alternating times and values",
+                            type: "text",
+                            defaultValue: "",
+                        },
+                    ],
+                    pulse: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Delay until pulse (secs)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Time for first transition (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                        {
+                            label: "Time for second transition (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                        {
+                            label: "Pulse width (secs)",
+                            type: "text",
+                            defaultValue: "1000M",
+                        },
+                        {
+                            label: "Period (secs)",
+                            type: "text",
+                            defaultValue: "1000M",
+                        },
+                    ],
+                    sin: [
+                        {
+                            label: "Offset value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Amplitude",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Frequency (Hz)",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Delay until sin starts (secs)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Phase offset (degrees)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                    ],
+                },
             },
         };
         _this.state = {
-            value: "dc(1)",
+            value: "",
             name: "",
+            type: "dc(1)",
         };
         return _this;
     }
@@ -48821,10 +49055,10 @@ var SourceI = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-3, 26, 0, 32] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [3, 26, 0, 32] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -12, y: 0, width: 24, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            this.state.value && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.value, x: 16, y: 20, fontSize: 10, fill: "black" }) :
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.state.type && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.type, x: 16, y: 20, fontSize: 10, fill: "black" }) :
                 null,
             this.state.name && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.name, x: -66, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
@@ -48855,17 +49089,179 @@ var SourceV = /** @class */ (function (_super) {
         _this.type = "v";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
-            value: {
-                label: "Value:",
-                type: "text",
+            type: {
+                label: "Type",
+                type: "case",
+                items: ["dc", "impulse", "step", "square", "triangle", "pwl", "pwl_repeating", "pulse", "sin"],
+                cases: {
+                    dc: [
+                        {
+                            label: "DC value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                    ],
+                    impulse: [
+                        {
+                            label: "Height",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Width (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                    ],
+                    step: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Delay until step (secs)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Rise time (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                    ],
+                    square: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Frequency (Hz)",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Duty cycle (%)",
+                            type: "text",
+                            defaultValue: "50",
+                        },
+                    ],
+                    triangle: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Frequency (Hz)",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                    ],
+                    pwl: [
+                        {
+                            label: "Comma-separated list of alternating times and values",
+                            type: "text",
+                            defaultValue: "",
+                        },
+                    ],
+                    pwl_repeating: [
+                        {
+                            label: "Comma-separated list of alternating times and values",
+                            type: "text",
+                            defaultValue: "",
+                        },
+                    ],
+                    pulse: [
+                        {
+                            label: "Initial value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Plateau value",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Delay until pulse (secs)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Time for first transition (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                        {
+                            label: "Time for second transition (secs)",
+                            type: "text",
+                            defaultValue: "1n",
+                        },
+                        {
+                            label: "Pulse width (secs)",
+                            type: "text",
+                            defaultValue: "1000M",
+                        },
+                        {
+                            label: "Period (secs)",
+                            type: "text",
+                            defaultValue: "1000M",
+                        },
+                    ],
+                    sin: [
+                        {
+                            label: "Offset value",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Amplitude",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Frequency (Hz)",
+                            type: "text",
+                            defaultValue: "1",
+                        },
+                        {
+                            label: "Delay until sin starts (secs)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                        {
+                            label: "Phase offset (degrees)",
+                            type: "text",
+                            defaultValue: "0",
+                        },
+                    ],
+                },
             },
         };
         _this.state = {
-            value: "dc(1)",
+            value: "",
             name: "",
+            type: "dc(1)",
         };
         return _this;
     }
@@ -48882,10 +49278,13 @@ var SourceV = /** @class */ (function (_super) {
     };
     SourceV.prototype.json = function (index) {
         this.jsonIndex = index;
-        return [this.type,
+        var res = [
+            this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.state.name, value: this.state.value, _json_: index },
-            this.getPoints().map(function (con) { return con.label; })];
+            { name: this.state.name, value: this.state.type, _json_: index },
+            this.getPoints().map(function (con) { return con.label; }),
+        ];
+        return res;
     };
     // display current for DC analysis
     SourceV.prototype.DisplayCurrent = function () {
@@ -48918,11 +49317,11 @@ var SourceV = /** @class */ (function (_super) {
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-3, 18, 3, 18] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-3, 30, 3, 30] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -12, y: 0, width: 24, height: 48, onMouseDown: this.props.onClick }),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
-            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 48, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
             this.props.dc ? this.DisplayCurrent() : null,
-            this.state.value && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.value, x: 16, y: 20, fontSize: 10, fill: "black" }) :
+            this.state.type && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.type, x: 16, y: 20, fontSize: 10, fill: "black" }) :
                 null,
             this.state.name && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.name, x: -66, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
