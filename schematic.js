@@ -24420,7 +24420,7 @@ var App = /** @class */ (function (_super) {
         var fstart_lbl = "Starting_frequency";
         var fstop_lbl = "Ending_frequency";
         var source_name_lbl = "source_for_ac"; // 'Name of V or I source for ac';
-        if (!this.state.elements.some(function (element) { return element.component.type === "g" || element.component.type === "a"; })) {
+        if (this.findProbes().length === 0) {
             // alert("AC Analysis: add a voltage probe to the diagram!");
             alert(en_US_1.i18n.AC_Analysis_add_a_voltage_probe);
             return;
@@ -44858,11 +44858,11 @@ var Capacitor = /** @class */ (function (_super) {
         _this.type = "c";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             c: {
-                label: "C:",
+                label: "C",
                 type: "text",
             },
         };
@@ -47768,16 +47768,16 @@ var Diode = /** @class */ (function (_super) {
         // this.area = this.state.area ? this.state.area : this.area;
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             type: {
-                label: "Type:",
+                label: "Type",
                 type: "select",
                 items: ["normal", "ideal"],
             },
             area: {
-                label: "Area:",
+                label: "Area",
                 type: "text",
             },
         };
@@ -48290,11 +48290,11 @@ var Inductor = /** @class */ (function (_super) {
         _this.type = "l";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             l: {
-                label: "L:",
+                label: "L",
                 type: "text",
             },
         };
@@ -48367,11 +48367,11 @@ var NFet = /** @class */ (function (_super) {
         _this.type = "n";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             wl: {
-                label: "WL:",
+                label: "WL",
                 type: "text",
             },
         };
@@ -48449,11 +48449,11 @@ var OpAmp = /** @class */ (function (_super) {
         _this.type = "o";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             A: {
-                label: "A:",
+                label: "A",
                 type: "text",
             },
         };
@@ -48529,11 +48529,11 @@ var PFet = /** @class */ (function (_super) {
         _this.type = "p";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             wl: {
-                label: "WL:",
+                label: "WL",
                 type: "text",
             },
         };
@@ -48612,15 +48612,15 @@ var Probe = /** @class */ (function (_super) {
         _this.type = "s";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             offset: {
-                label: "Offset:",
+                label: "Offset",
                 type: "text",
             },
             color: {
-                label: "Color:",
+                label: "Color",
                 type: "select",
                 items: ["red", "green", "blue", "cyan", "magenta", "yellow", "black"],
             },
@@ -48698,11 +48698,11 @@ var Resistor = /** @class */ (function (_super) {
         _this.type = "r";
         _this.properties = {
             name: {
-                label: "Name:",
+                label: "Name",
                 type: "text",
             },
             r: {
-                label: "R:",
+                label: "R",
                 type: "text",
             },
         };
