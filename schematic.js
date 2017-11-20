@@ -934,7 +934,7 @@ var React = __webpack_require__(20);
 var PropTypes = __webpack_require__(199);
 var createClass = __webpack_require__(201);
 
-var ReactInstanceMap = __webpack_require__(26);
+var ReactInstanceMap = __webpack_require__(27);
 var ReactMultiChild = __webpack_require__(86);
 var ReactUpdates = __webpack_require__(15);
 
@@ -1362,7 +1362,7 @@ module.exports = ExecutionEnvironment;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var const_1 = __webpack_require__(27);
+var const_1 = __webpack_require__(23);
 function PrepareLineProps(props) {
     return {
         stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
@@ -1461,6 +1461,7 @@ function prepare(lines) {
     prepareClear(lines);
     // prepareGround(lines);
     labelIndex = 1;
+    lines = lines.map(function (line) { return line; });
     lines.sort(function (a, b) {
         if (a.component.type === "g") {
             return -1;
@@ -1685,7 +1686,7 @@ exports.ViewLimits = ViewLimits;
 
 
 
-var _prodInvariant = __webpack_require__(23);
+var _prodInvariant = __webpack_require__(24);
 
 var ReactCurrentOwner = __webpack_require__(16);
 
@@ -2132,11 +2133,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
+var const_1 = __webpack_require__(23);
 var helper_1 = __webpack_require__(10);
 var ConnectionPoint = /** @class */ (function (_super) {
     tslib_1.__extends(ConnectionPoint, _super);
     function ConnectionPoint(props) {
         var _this = _super.call(this, props) || this;
+        _this.type = 0;
         _this.x = 0;
         _this.y = 0;
         _this.rx = helper_1.RotatePointX(_this.props.x, _this.props.y, _this.props.rotation);
@@ -2151,7 +2154,18 @@ var ConnectionPoint = /** @class */ (function (_super) {
         this.y = this.props.y + this.props.parent.props.y;
         this.rx = helper_1.RotatePointX(this.props.x, this.props.y, this.props.rotation);
         this.ry = helper_1.RotatePointY(this.props.x, this.props.y, this.props.rotation);
-        return (React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } })));
+        this.type = this.type | 0;
+        var point;
+        if (this.type === 0) {
+            point = React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } }));
+        }
+        else if (this.type === 1) {
+            point = React.createElement(react_konva_1.Circle, { x: this.props.x, y: this.props.y, radius: 2, onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } });
+        }
+        else {
+            point = React.createElement(react_konva_1.Circle, { x: this.props.x, y: this.props.y, radius: 2, stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH, fill: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } });
+        }
+        return (point);
     };
     return ConnectionPoint;
 }(React.Component));
@@ -2179,7 +2193,7 @@ var _prodInvariant = __webpack_require__(4),
 var CallbackQueue = __webpack_require__(75);
 var PooledClass = __webpack_require__(22);
 var ReactFeatureFlags = __webpack_require__(76);
-var ReactReconciler = __webpack_require__(24);
+var ReactReconciler = __webpack_require__(25);
 var Transaction = __webpack_require__(35);
 
 var invariant = __webpack_require__(1);
@@ -3599,6 +3613,38 @@ module.exports = PooledClass;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_STROKE = "black";
+exports.DEFAULT_STROKE_SELECTED = "blue";
+exports.DEFAULT_STROKE_WIDTH = 1;
+exports.DEFAULT_FILL = "red";
+exports.DEFAULT_FONT_FAMILY = "Calibri";
+exports.DEFAULT_FONT_SIZE = 12;
+exports.DEFAULT_SCALE = 2;
+exports.DEFAULT_SCALE_STEP = 0.5;
+exports.DEFAULT_SHIFT_STEP = 96;
+exports.DEFAULT_ROTATE_STEP = 90;
+exports.DEFAULT_GRID_STROKE = "grey";
+exports.DEFAULT_GRID_WIDTH = 0.1;
+exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
+exports.probe_colors_rgb = {
+    red: "rgb(232,77,57)",
+    green: "rgb(31,171,84)",
+    blue: "rgb(35,110,201)",
+    cyan: "rgb(99,217,234)",
+    magenta: "rgb(237,95,166)",
+    yellow: "rgb(244,211,69)",
+    black: "rgb(0,0,0)",
+    xaxis: undefined,
+};
+
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -3637,7 +3683,7 @@ function reactProdInvariant(code) {
 module.exports = reactProdInvariant;
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3807,7 +3853,7 @@ module.exports = ReactReconciler;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3928,7 +3974,7 @@ DOMLazyTree.queueText = queueText;
 module.exports = DOMLazyTree;
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3975,38 +4021,6 @@ var ReactInstanceMap = {
 };
 
 module.exports = ReactInstanceMap;
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_STROKE = "black";
-exports.DEFAULT_STROKE_SELECTED = "blue";
-exports.DEFAULT_STROKE_WIDTH = 1;
-exports.DEFAULT_FILL = "red";
-exports.DEFAULT_FONT_FAMILY = "Calibri";
-exports.DEFAULT_FONT_SIZE = 12;
-exports.DEFAULT_SCALE = 2;
-exports.DEFAULT_SCALE_STEP = 0.5;
-exports.DEFAULT_SHIFT_STEP = 96;
-exports.DEFAULT_ROTATE_STEP = 90;
-exports.DEFAULT_GRID_STROKE = "grey";
-exports.DEFAULT_GRID_WIDTH = 0.1;
-exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
-exports.probe_colors_rgb = {
-    red: "rgb(232,77,57)",
-    green: "rgb(31,171,84)",
-    blue: "rgb(35,110,201)",
-    cyan: "rgb(99,217,234)",
-    magenta: "rgb(237,95,166)",
-    yellow: "rgb(244,211,69)",
-    black: "rgb(0,0,0)",
-    xaxis: undefined,
-};
-
 
 /***/ }),
 /* 28 */
@@ -6319,7 +6333,7 @@ module.exports = getEventModifierState;
 
 
 
-var DOMLazyTree = __webpack_require__(25);
+var DOMLazyTree = __webpack_require__(26);
 var Danger = __webpack_require__(131);
 var ReactDOMComponentTree = __webpack_require__(7);
 var ReactInstrumentation = __webpack_require__(13);
@@ -6978,7 +6992,7 @@ module.exports = KeyEscapeUtils;
 var _prodInvariant = __webpack_require__(4);
 
 var ReactCurrentOwner = __webpack_require__(16);
-var ReactInstanceMap = __webpack_require__(26);
+var ReactInstanceMap = __webpack_require__(27);
 var ReactInstrumentation = __webpack_require__(13);
 var ReactUpdates = __webpack_require__(15);
 
@@ -8044,7 +8058,7 @@ exports.parse_number = parse_number;
 
 
 
-var _prodInvariant = __webpack_require__(23),
+var _prodInvariant = __webpack_require__(24),
     _assign = __webpack_require__(6);
 
 var ReactNoopUpdateQueue = __webpack_require__(63);
@@ -11298,11 +11312,11 @@ module.exports = ReactDOMSelect;
 var _prodInvariant = __webpack_require__(4);
 
 var ReactComponentEnvironment = __webpack_require__(52);
-var ReactInstanceMap = __webpack_require__(26);
+var ReactInstanceMap = __webpack_require__(27);
 var ReactInstrumentation = __webpack_require__(13);
 
 var ReactCurrentOwner = __webpack_require__(16);
-var ReactReconciler = __webpack_require__(24);
+var ReactReconciler = __webpack_require__(25);
 var ReactChildReconciler = __webpack_require__(151);
 
 var emptyFunction = __webpack_require__(12);
@@ -12458,7 +12472,7 @@ module.exports = getActiveElement;
 
 var _prodInvariant = __webpack_require__(4);
 
-var DOMLazyTree = __webpack_require__(25);
+var DOMLazyTree = __webpack_require__(26);
 var DOMProperty = __webpack_require__(18);
 var React = __webpack_require__(20);
 var ReactBrowserEventEmitter = __webpack_require__(39);
@@ -12467,10 +12481,10 @@ var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDOMContainerInfo = __webpack_require__(186);
 var ReactDOMFeatureFlags = __webpack_require__(187);
 var ReactFeatureFlags = __webpack_require__(76);
-var ReactInstanceMap = __webpack_require__(26);
+var ReactInstanceMap = __webpack_require__(27);
 var ReactInstrumentation = __webpack_require__(13);
 var ReactMarkupChecksum = __webpack_require__(188);
-var ReactReconciler = __webpack_require__(24);
+var ReactReconciler = __webpack_require__(25);
 var ReactUpdateQueue = __webpack_require__(56);
 var ReactUpdates = __webpack_require__(15);
 
@@ -13484,7 +13498,7 @@ module.exports = ReactChildren;
 
 
 
-var _prodInvariant = __webpack_require__(23);
+var _prodInvariant = __webpack_require__(24);
 
 var invariant = __webpack_require__(1);
 
@@ -13599,7 +13613,7 @@ module.exports = PooledClass;
 
 
 
-var _prodInvariant = __webpack_require__(23);
+var _prodInvariant = __webpack_require__(24);
 
 var ReactCurrentOwner = __webpack_require__(16);
 var REACT_ELEMENT_TYPE = __webpack_require__(64);
@@ -14014,7 +14028,7 @@ module.exports = ReactDOMFactories;
 
 
 
-var _prodInvariant = __webpack_require__(23);
+var _prodInvariant = __webpack_require__(24);
 
 var ReactPropTypeLocationNames = __webpack_require__(105);
 var ReactPropTypesSecret = __webpack_require__(106);
@@ -14285,7 +14299,7 @@ module.exports = factory(Component, isValidElement, ReactNoopUpdateQueue);
  */
 
 
-var _prodInvariant = __webpack_require__(23);
+var _prodInvariant = __webpack_require__(24);
 
 var ReactElement = __webpack_require__(21);
 
@@ -14333,7 +14347,7 @@ module.exports = onlyChild;
 var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDefaultInjection = __webpack_require__(113);
 var ReactMount = __webpack_require__(95);
-var ReactReconciler = __webpack_require__(24);
+var ReactReconciler = __webpack_require__(25);
 var ReactUpdates = __webpack_require__(15);
 var ReactVersion = __webpack_require__(190);
 
@@ -16586,7 +16600,7 @@ module.exports = ReactComponentBrowserEnvironment;
 
 var _prodInvariant = __webpack_require__(4);
 
-var DOMLazyTree = __webpack_require__(25);
+var DOMLazyTree = __webpack_require__(26);
 var ExecutionEnvironment = __webpack_require__(9);
 
 var createNodesFromMarkup = __webpack_require__(132);
@@ -16995,7 +17009,7 @@ var _prodInvariant = __webpack_require__(4),
 
 var AutoFocusUtils = __webpack_require__(137);
 var CSSPropertyOperations = __webpack_require__(138);
-var DOMLazyTree = __webpack_require__(25);
+var DOMLazyTree = __webpack_require__(26);
 var DOMNamespaces = __webpack_require__(49);
 var DOMProperty = __webpack_require__(18);
 var DOMPropertyOperations = __webpack_require__(83);
@@ -19273,7 +19287,7 @@ module.exports = ReactDOMTextarea;
 
 
 
-var ReactReconciler = __webpack_require__(24);
+var ReactReconciler = __webpack_require__(25);
 
 var instantiateReactComponent = __webpack_require__(87);
 var KeyEscapeUtils = __webpack_require__(55);
@@ -19437,10 +19451,10 @@ var React = __webpack_require__(20);
 var ReactComponentEnvironment = __webpack_require__(52);
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactErrorUtils = __webpack_require__(44);
-var ReactInstanceMap = __webpack_require__(26);
+var ReactInstanceMap = __webpack_require__(27);
 var ReactInstrumentation = __webpack_require__(13);
 var ReactNodeTypes = __webpack_require__(88);
-var ReactReconciler = __webpack_require__(24);
+var ReactReconciler = __webpack_require__(25);
 
 if (process.env.NODE_ENV !== 'production') {
   var checkReactTypeSpec = __webpack_require__(153);
@@ -20864,7 +20878,7 @@ module.exports = ReactServerUpdateQueue;
 
 var _assign = __webpack_require__(6);
 
-var DOMLazyTree = __webpack_require__(25);
+var DOMLazyTree = __webpack_require__(26);
 var ReactDOMComponentTree = __webpack_require__(7);
 
 var ReactDOMEmptyComponent = function (instantiate) {
@@ -21069,7 +21083,7 @@ var _prodInvariant = __webpack_require__(4),
     _assign = __webpack_require__(6);
 
 var DOMChildrenOperations = __webpack_require__(48);
-var DOMLazyTree = __webpack_require__(25);
+var DOMLazyTree = __webpack_require__(26);
 var ReactDOMComponentTree = __webpack_require__(7);
 
 var escapeTextContentForBrowser = __webpack_require__(38);
@@ -23525,7 +23539,7 @@ var _prodInvariant = __webpack_require__(4);
 
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactDOMComponentTree = __webpack_require__(7);
-var ReactInstanceMap = __webpack_require__(26);
+var ReactInstanceMap = __webpack_require__(27);
 
 var getHostComponentFromComposite = __webpack_require__(96);
 var invariant = __webpack_require__(1);
@@ -23861,7 +23875,7 @@ var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var grid_1 = __webpack_require__(202);
 var icon_1 = __webpack_require__(32);
-var const_1 = __webpack_require__(27);
+var const_1 = __webpack_require__(23);
 var element_1 = __webpack_require__(203);
 var circuit_1 = __webpack_require__(204);
 var en_US_1 = __webpack_require__(60);
@@ -23889,6 +23903,7 @@ var App = /** @class */ (function (_super) {
     tslib_1.__extends(App, _super);
     function App(props) {
         var _this = _super.call(this, props) || this;
+        _this.changePoint = false;
         _this.ac_npts = "50";
         _this.ac_fstart = "10";
         _this.ac_fstop = "1G";
@@ -23914,6 +23929,8 @@ var App = /** @class */ (function (_super) {
     }
     App.prototype.render = function () {
         var _this = this;
+        var elements = this.renderElements();
+        // this.updateTypePoint();
         return (React.createElement("div", { className: "noselect" },
             React.createElement("table", { className: "shematic-table" },
                 React.createElement("tbody", null,
@@ -23968,7 +23985,7 @@ var App = /** @class */ (function (_super) {
                             React.createElement("div", { className: "shematic-app", onMouseMove: this.onMouseMove.bind(this), onMouseDown: this.onMouseDown.bind(this), onMouseUp: this.onMouseUp.bind(this), style: { position: "relative" } },
                                 React.createElement(grid_1.Grid, { width: 800, height: 456, scale: this.state.scale, stroke: this.state.stroke }),
                                 React.createElement(react_konva_1.Stage, { width: 800, height: 456 },
-                                    this.renderElements(),
+                                    elements,
                                     this.state.line ?
                                         React.createElement(sline_1.SLine, { x: this.state.line.x + this.state.shiftX, y: this.state.line.y + this.state.shiftY, endX: this.state.line.endX + this.state.shiftX, endY: this.state.line.endY + this.state.shiftY, onConnectorMouseDown: function () { }, scale: this.state.scale })
                                         :
@@ -24029,6 +24046,13 @@ var App = /** @class */ (function (_super) {
         this.state.cards.push(React.createElement(cardtraninput_1.CardTranInput, { label: "Transient Analysis", x: 100, y: 100, tran_tstop: this.tran_tstop, nameCard: en_US_1.i18n.Transient_Analysis, onOkClick: cb, onMouseDown: function () { _this.unselectAll(); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
         this.setState({});
     };
+    App.prototype.componentDidUpdate = function () {
+        if (this.changePoint) {
+            this.updateTypePoint();
+            this.changePoint = false;
+            this.setState({});
+        }
+    };
     App.prototype.renderElements = function () {
         var _this = this;
         return this.state.elements.map(function (element, index) {
@@ -24078,6 +24102,7 @@ var App = /** @class */ (function (_super) {
                     throw new Error("undestend type");
             }
             var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this, element), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY, app: _this, dc: _this.state.dc }));
+            // element.component = new elclass.type(elclass.props);
             return elclass;
         });
     };
@@ -24177,6 +24202,9 @@ var App = /** @class */ (function (_super) {
             });
             this.setState({ selectRect: undefined });
         }
+        else {
+            this.changePoint = true;
+        }
         if (this.state.line) {
             var eLine = new element_1.Element();
             eLine.type = "sline";
@@ -24185,11 +24213,51 @@ var App = /** @class */ (function (_super) {
             eLine.endX = this.state.line.endX;
             eLine.endY = this.state.line.endY;
             this.state.elements.push(eLine);
+            this.changePoint = true;
             this.setState({
                 elements: this.state.elements,
                 line: undefined,
             });
         }
+    };
+    App.prototype.updateTypePoint = function () {
+        var points = [];
+        // Получили все точки
+        this.state.elements.forEach(function (element) {
+            element.component.getPoints().forEach(function (point) {
+                points.push(point);
+            });
+        });
+        // отсортировка точек
+        function comparePoints(a, b) {
+            if (a.rx + a.props.parent.props.x > b.rx + b.props.parent.props.x) {
+                return 1;
+            }
+            else if (a.rx + a.props.parent.props.x < b.rx + b.props.parent.props.x) {
+                return -1;
+            }
+            else if (a.ry + a.props.parent.props.y > b.ry + b.props.parent.props.y) {
+                return 1;
+            }
+            else if (a.ry + a.props.parent.props.y < b.ry + b.props.parent.props.y) {
+                return -1;
+            }
+            return 0;
+        }
+        points.sort(comparePoints);
+        var groupPoints = [];
+        points.forEach(function (point) {
+            if (!groupPoints.length || comparePoints(groupPoints[0], point) === 0) {
+                groupPoints.push(point);
+            }
+            else {
+                // изменение типа точки
+                groupPoints.forEach(function (point) { return point.type = (groupPoints.length === 1 ? 0 : (groupPoints.length === 2 ? 1 : 2)); });
+                groupPoints = [];
+                groupPoints.push(point);
+            }
+        });
+        groupPoints.forEach(function (point) { return point.type = (groupPoints.length === 1 ? 0 : (groupPoints.length === 2 ? 1 : 2)); });
     };
     App.prototype.showComment = function (text) {
         this.setState({ commentDown: text });
@@ -24257,14 +24325,9 @@ var App = /** @class */ (function (_super) {
                 if (element.rotation === 360) {
                     element.rotation = 0;
                 }
-                // element.component.getPoints().forEach((conection) => {
-                //     const temp = RotatePoint(conection.x, conection.y, element.rotation);
-                //     conection.x = temp.x;
-                //     conection.y = temp.y;
-                //     console.log(conection.x, conection.y);
-                // });
             }
         });
+        this.changePoint = true;
         this.setState({});
     };
     App.prototype.onZoomInClick = function () {
@@ -24326,6 +24389,7 @@ var App = /** @class */ (function (_super) {
         el.x = 24;
         el.y = 24;
         this.state.elements.push(el);
+        this.changePoint = true;
         this.setState({ elements: this.state.elements });
     };
     App.prototype.onDeleteElement = function (element) {
@@ -24348,6 +24412,7 @@ var App = /** @class */ (function (_super) {
         indexes.forEach(function (index) {
             ArrayRemove(_this.state.elements, index);
         });
+        this.changePoint = true;
         this.setState({});
     };
     App.prototype.json = function (elements) {
@@ -43054,7 +43119,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(27);
+var const_1 = __webpack_require__(23);
 var Grid = /** @class */ (function (_super) {
     tslib_1.__extends(Grid, _super);
     function Grid(props) {
@@ -44821,7 +44886,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(27);
+var const_1 = __webpack_require__(23);
 var ButtonComponent = /** @class */ (function (_super) {
     tslib_1.__extends(ButtonComponent, _super);
     function ButtonComponent(props) {
@@ -47844,7 +47909,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var const_1 = __webpack_require__(59);
-var const_2 = __webpack_require__(27);
+var const_2 = __webpack_require__(23);
 var helper_1 = __webpack_require__(10);
 var dialog_1 = __webpack_require__(40);
 var Graph = /** @class */ (function (_super) {
@@ -49079,7 +49144,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(27);
+var const_1 = __webpack_require__(23);
 var helper_1 = __webpack_require__(10);
 var connection_point_1 = __webpack_require__(14);
 var SourceV = /** @class */ (function (_super) {
