@@ -328,7 +328,7 @@ module.exports = invariant;
 
 
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 
 /**
  * Similar to invariant but only logs a warning if the condition is not met.
@@ -622,7 +622,7 @@ module.exports = reactProdInvariant;
 "use strict";
 
 
-module.exports = __webpack_require__(20);
+module.exports = __webpack_require__(21);
 
 
 /***/ }),
@@ -929,7 +929,7 @@ module.exports = ReactDOMComponentTree;
 // https://github.com/reactjs/react-art
 
 var Konva = __webpack_require__(197);
-var React = __webpack_require__(20);
+var React = __webpack_require__(21);
 
 var PropTypes = __webpack_require__(199);
 var createClass = __webpack_require__(201);
@@ -1362,7 +1362,7 @@ module.exports = ExecutionEnvironment;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var const_1 = __webpack_require__(23);
+var const_1 = __webpack_require__(19);
 function PrepareLineProps(props) {
     return {
         stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
@@ -1469,6 +1469,12 @@ function prepare(lines) {
         if (b.component.type === "g") {
             return 1;
         }
+        if (a.component.type === "L") {
+            return -1;
+        }
+        if (b.component.type === "L") {
+            return 1;
+        }
         if (a.component.type > b.component.type) {
             return -1;
         }
@@ -1482,6 +1488,9 @@ function prepare(lines) {
         }
         else if (line.label === undefined && line.component.type === "g") {
             prepareLine(lines, line, 0);
+        }
+        else if (line.label === undefined && line.component.type === "L") {
+            prepareLine(lines, line, line.component.state.label);
         }
     });
     // Присвоение Label для компонентов без линии
@@ -1672,6 +1681,55 @@ exports.ViewLimits = ViewLimits;
 
 /***/ }),
 /* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(3);
+var React = __webpack_require__(5);
+var react_konva_1 = __webpack_require__(8);
+var const_1 = __webpack_require__(19);
+var helper_1 = __webpack_require__(10);
+var ConnectionPoint = /** @class */ (function (_super) {
+    tslib_1.__extends(ConnectionPoint, _super);
+    function ConnectionPoint(props) {
+        var _this = _super.call(this, props) || this;
+        _this.type = 0;
+        _this.x = 0;
+        _this.y = 0;
+        _this.rx = helper_1.RotatePointX(_this.props.x, _this.props.y, _this.props.rotation);
+        _this.ry = helper_1.RotatePointY(_this.props.x, _this.props.y, _this.props.rotation);
+        _this.state = {};
+        return _this;
+    }
+    ConnectionPoint.prototype.render = function () {
+        var _this = this;
+        var argsLine = helper_1.PrepareLineProps(this.props);
+        this.x = this.props.x + this.props.parent.props.x;
+        this.y = this.props.y + this.props.parent.props.y;
+        this.rx = helper_1.RotatePointX(this.props.x, this.props.y, this.props.rotation);
+        this.ry = helper_1.RotatePointY(this.props.x, this.props.y, this.props.rotation);
+        this.type = this.type | 0;
+        var point;
+        if (this.type === 0) {
+            point = React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } }));
+        }
+        else if (this.type === 1) {
+            point = React.createElement(react_konva_1.Circle, { x: this.props.x, y: this.props.y, radius: 2, onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } });
+        }
+        else {
+            point = React.createElement(react_konva_1.Circle, { x: this.props.x, y: this.props.y, radius: 2, stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH, fill: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } });
+        }
+        return (point);
+    };
+    return ConnectionPoint;
+}(React.Component));
+exports.ConnectionPoint = ConnectionPoint;
+
+
+/***/ }),
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2054,7 +2112,7 @@ module.exports = ReactComponentTreeHook;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2096,7 +2154,7 @@ emptyFunction.thatReturnsArgument = function (arg) {
 module.exports = emptyFunction;
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2124,55 +2182,6 @@ module.exports = { debugTool: debugTool };
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var tslib_1 = __webpack_require__(3);
-var React = __webpack_require__(5);
-var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(23);
-var helper_1 = __webpack_require__(10);
-var ConnectionPoint = /** @class */ (function (_super) {
-    tslib_1.__extends(ConnectionPoint, _super);
-    function ConnectionPoint(props) {
-        var _this = _super.call(this, props) || this;
-        _this.type = 0;
-        _this.x = 0;
-        _this.y = 0;
-        _this.rx = helper_1.RotatePointX(_this.props.x, _this.props.y, _this.props.rotation);
-        _this.ry = helper_1.RotatePointY(_this.props.x, _this.props.y, _this.props.rotation);
-        _this.state = {};
-        return _this;
-    }
-    ConnectionPoint.prototype.render = function () {
-        var _this = this;
-        var argsLine = helper_1.PrepareLineProps(this.props);
-        this.x = this.props.x + this.props.parent.props.x;
-        this.y = this.props.y + this.props.parent.props.y;
-        this.rx = helper_1.RotatePointX(this.props.x, this.props.y, this.props.rotation);
-        this.ry = helper_1.RotatePointY(this.props.x, this.props.y, this.props.rotation);
-        this.type = this.type | 0;
-        var point;
-        if (this.type === 0) {
-            point = React.createElement(react_konva_1.Circle, tslib_1.__assign({ x: this.props.x, y: this.props.y, radius: 2 }, argsLine, { onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } }));
-        }
-        else if (this.type === 1) {
-            point = React.createElement(react_konva_1.Circle, { x: this.props.x, y: this.props.y, radius: 2, onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } });
-        }
-        else {
-            point = React.createElement(react_konva_1.Circle, { x: this.props.x, y: this.props.y, radius: 2, stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH, fill: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, onMouseDown: function (e) { return _this.props.onConnectorMouseDown(e, _this.rx, _this.ry); } });
-        }
-        return (point);
-    };
-    return ConnectionPoint;
-}(React.Component));
-exports.ConnectionPoint = ConnectionPoint;
-
-
-/***/ }),
 /* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2191,7 +2200,7 @@ var _prodInvariant = __webpack_require__(4),
     _assign = __webpack_require__(6);
 
 var CallbackQueue = __webpack_require__(75);
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 var ReactFeatureFlags = __webpack_require__(76);
 var ReactReconciler = __webpack_require__(25);
 var Transaction = __webpack_require__(35);
@@ -2476,9 +2485,9 @@ module.exports = ReactCurrentOwner;
 
 var _assign = __webpack_require__(6);
 
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var warning = __webpack_require__(2);
 
 var didWarnForAddedNewProperty = false;
@@ -2954,6 +2963,38 @@ module.exports = DOMProperty;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_STROKE = "black";
+exports.DEFAULT_STROKE_SELECTED = "blue";
+exports.DEFAULT_STROKE_WIDTH = 1;
+exports.DEFAULT_FILL = "red";
+exports.DEFAULT_FONT_FAMILY = "Calibri";
+exports.DEFAULT_FONT_SIZE = 12;
+exports.DEFAULT_SCALE = 2;
+exports.DEFAULT_SCALE_STEP = 0.5;
+exports.DEFAULT_SHIFT_STEP = 96;
+exports.DEFAULT_ROTATE_STEP = 90;
+exports.DEFAULT_GRID_STROKE = "grey";
+exports.DEFAULT_GRID_WIDTH = 0.1;
+exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
+exports.probe_colors_rgb = {
+    red: "rgb(232,77,57)",
+    green: "rgb(31,171,84)",
+    blue: "rgb(35,110,201)",
+    cyan: "rgb(99,217,234)",
+    magenta: "rgb(237,95,166)",
+    yellow: "rgb(244,211,69)",
+    black: "rgb(0,0,0)",
+    xaxis: undefined,
+};
+
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
 var Device = /** @class */ (function () {
     function Device() {
     }
@@ -3012,7 +3053,7 @@ exports.Device = Device;
 
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3031,7 +3072,7 @@ var _assign = __webpack_require__(6);
 var ReactBaseClasses = __webpack_require__(62);
 var ReactChildren = __webpack_require__(99);
 var ReactDOMFactories = __webpack_require__(103);
-var ReactElement = __webpack_require__(21);
+var ReactElement = __webpack_require__(22);
 var ReactPropTypes = __webpack_require__(107);
 var ReactVersion = __webpack_require__(109);
 
@@ -3148,7 +3189,7 @@ module.exports = React;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3493,7 +3534,7 @@ module.exports = ReactElement;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3609,38 +3650,6 @@ module.exports = PooledClass;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
 
 /***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_STROKE = "black";
-exports.DEFAULT_STROKE_SELECTED = "blue";
-exports.DEFAULT_STROKE_WIDTH = 1;
-exports.DEFAULT_FILL = "red";
-exports.DEFAULT_FONT_FAMILY = "Calibri";
-exports.DEFAULT_FONT_SIZE = 12;
-exports.DEFAULT_SCALE = 2;
-exports.DEFAULT_SCALE_STEP = 0.5;
-exports.DEFAULT_SHIFT_STEP = 96;
-exports.DEFAULT_ROTATE_STEP = 90;
-exports.DEFAULT_GRID_STROKE = "grey";
-exports.DEFAULT_GRID_WIDTH = 0.1;
-exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
-exports.probe_colors_rgb = {
-    red: "rgb(232,77,57)",
-    green: "rgb(31,171,84)",
-    blue: "rgb(35,110,201)",
-    cyan: "rgb(99,217,234)",
-    magenta: "rgb(237,95,166)",
-    yellow: "rgb(244,211,69)",
-    black: "rgb(0,0,0)",
-    xaxis: undefined,
-};
-
-
-/***/ }),
 /* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3698,7 +3707,7 @@ module.exports = reactProdInvariant;
 
 
 var ReactRef = __webpack_require__(120);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 
 var warning = __webpack_require__(2);
 
@@ -5704,7 +5713,7 @@ module.exports = ReactBrowserEventEmitter;
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
-var react_draggable_1 = __webpack_require__(217);
+var react_draggable_1 = __webpack_require__(218);
 var icon_1 = __webpack_require__(32);
 var zIndex = 1000;
 function getZIndex() {
@@ -6336,7 +6345,7 @@ module.exports = getEventModifierState;
 var DOMLazyTree = __webpack_require__(26);
 var Danger = __webpack_require__(131);
 var ReactDOMComponentTree = __webpack_require__(7);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 
 var createMicrosoftUnsafeLocalFunction = __webpack_require__(50);
 var setInnerHTML = __webpack_require__(37);
@@ -6626,7 +6635,7 @@ var _prodInvariant = __webpack_require__(4);
 var ReactPropTypesSecret = __webpack_require__(84);
 var propTypesFactory = __webpack_require__(67);
 
-var React = __webpack_require__(20);
+var React = __webpack_require__(21);
 var PropTypes = propTypesFactory(React.isValidElement);
 
 var invariant = __webpack_require__(1);
@@ -6993,7 +7002,7 @@ var _prodInvariant = __webpack_require__(4);
 
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactInstanceMap = __webpack_require__(27);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 var ReactUpdates = __webpack_require__(15);
 
 var invariant = __webpack_require__(1);
@@ -7229,7 +7238,7 @@ module.exports = ReactUpdateQueue;
 
 var _assign = __webpack_require__(6);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var warning = __webpack_require__(2);
 
 var validateDOMNesting = emptyFunction;
@@ -8379,8 +8388,8 @@ module.exports = getIteratorFn;
 
 
 var ReactCurrentOwner = __webpack_require__(16);
-var ReactComponentTreeHook = __webpack_require__(11);
-var ReactElement = __webpack_require__(21);
+var ReactComponentTreeHook = __webpack_require__(12);
+var ReactElement = __webpack_require__(22);
 
 var checkReactTypeSpec = __webpack_require__(104);
 
@@ -8655,7 +8664,7 @@ module.exports = function(isValidElement) {
 
 
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var invariant = __webpack_require__(1);
 var warning = __webpack_require__(2);
 var assign = __webpack_require__(6);
@@ -10252,7 +10261,7 @@ var _prodInvariant = __webpack_require__(4);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 
 var invariant = __webpack_require__(1);
 
@@ -10848,7 +10857,7 @@ module.exports = CSSProperty;
 
 var DOMProperty = __webpack_require__(18);
 var ReactDOMComponentTree = __webpack_require__(7);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 
 var quoteAttributeValueForBrowser = __webpack_require__(145);
 var warning = __webpack_require__(2);
@@ -11313,13 +11322,13 @@ var _prodInvariant = __webpack_require__(4);
 
 var ReactComponentEnvironment = __webpack_require__(52);
 var ReactInstanceMap = __webpack_require__(27);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactReconciler = __webpack_require__(25);
 var ReactChildReconciler = __webpack_require__(151);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var flattenChildren = __webpack_require__(158);
 var invariant = __webpack_require__(1);
 
@@ -11895,7 +11904,7 @@ module.exports = instantiateReactComponent;
 
 var _prodInvariant = __webpack_require__(4);
 
-var React = __webpack_require__(20);
+var React = __webpack_require__(21);
 
 var invariant = __webpack_require__(1);
 
@@ -12222,7 +12231,7 @@ module.exports = traverseAllChildren;
  * @typechecks
  */
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 
 /**
  * Upstream version of event listener. Does not take into account specific
@@ -12474,7 +12483,7 @@ var _prodInvariant = __webpack_require__(4);
 
 var DOMLazyTree = __webpack_require__(26);
 var DOMProperty = __webpack_require__(18);
-var React = __webpack_require__(20);
+var React = __webpack_require__(21);
 var ReactBrowserEventEmitter = __webpack_require__(39);
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactDOMComponentTree = __webpack_require__(7);
@@ -12482,7 +12491,7 @@ var ReactDOMContainerInfo = __webpack_require__(186);
 var ReactDOMFeatureFlags = __webpack_require__(187);
 var ReactFeatureFlags = __webpack_require__(76);
 var ReactInstanceMap = __webpack_require__(27);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 var ReactMarkupChecksum = __webpack_require__(188);
 var ReactReconciler = __webpack_require__(25);
 var ReactUpdateQueue = __webpack_require__(56);
@@ -13304,9 +13313,9 @@ ReactDOM.render(React.createElement(app_1.App, null), document.getElementById("s
 
 
 var PooledClass = __webpack_require__(100);
-var ReactElement = __webpack_require__(21);
+var ReactElement = __webpack_require__(22);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var traverseAllChildren = __webpack_require__(101);
 
 var twoArgumentPooler = PooledClass.twoArgumentPooler;
@@ -13855,7 +13864,7 @@ module.exports = KeyEscapeUtils;
 
 
 
-var ReactElement = __webpack_require__(21);
+var ReactElement = __webpack_require__(22);
 
 /**
  * Create a factory that creates HTML tag elements.
@@ -14044,7 +14053,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(11);
+  ReactComponentTreeHook = __webpack_require__(12);
 }
 
 var loggedTypeFailures = {};
@@ -14086,7 +14095,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         if (process.env.NODE_ENV !== 'production') {
           if (!ReactComponentTreeHook) {
-            ReactComponentTreeHook = __webpack_require__(11);
+            ReactComponentTreeHook = __webpack_require__(12);
           }
           if (debugID !== null) {
             componentStackInfo = ReactComponentTreeHook.getStackAddendumByID(debugID);
@@ -14168,7 +14177,7 @@ module.exports = ReactPropTypesSecret;
 
 
 
-var _require = __webpack_require__(21),
+var _require = __webpack_require__(22),
     isValidElement = _require.isValidElement;
 
 var factory = __webpack_require__(67);
@@ -14277,7 +14286,7 @@ module.exports = '15.6.2';
 var _require = __webpack_require__(62),
     Component = _require.Component;
 
-var _require2 = __webpack_require__(21),
+var _require2 = __webpack_require__(22),
     isValidElement = _require2.isValidElement;
 
 var ReactNoopUpdateQueue = __webpack_require__(63);
@@ -14301,7 +14310,7 @@ module.exports = factory(Component, isValidElement, ReactNoopUpdateQueue);
 
 var _prodInvariant = __webpack_require__(24);
 
-var ReactElement = __webpack_require__(21);
+var ReactElement = __webpack_require__(22);
 
 var invariant = __webpack_require__(1);
 
@@ -14429,7 +14438,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 if (process.env.NODE_ENV !== 'production') {
-  var ReactInstrumentation = __webpack_require__(13);
+  var ReactInstrumentation = __webpack_require__(14);
   var ReactDOMUnknownPropertyHook = __webpack_require__(193);
   var ReactDOMNullInputValuePropHook = __webpack_require__(194);
   var ReactDOMInvalidARIAHook = __webpack_require__(195);
@@ -15012,7 +15021,7 @@ module.exports = BeforeInputEventPlugin;
 
 var _assign = __webpack_require__(6);
 
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 
 var getTextContentAccessor = __webpack_require__(74);
 
@@ -15694,7 +15703,7 @@ module.exports = ReactOwner;
 
 var ReactInvalidSetStateWarningHook = __webpack_require__(123);
 var ReactHostOperationHistoryHook = __webpack_require__(124);
-var ReactComponentTreeHook = __webpack_require__(11);
+var ReactComponentTreeHook = __webpack_require__(12);
 var ExecutionEnvironment = __webpack_require__(9);
 
 var performanceNow = __webpack_require__(125);
@@ -16604,7 +16613,7 @@ var DOMLazyTree = __webpack_require__(26);
 var ExecutionEnvironment = __webpack_require__(9);
 
 var createNodesFromMarkup = __webpack_require__(132);
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var invariant = __webpack_require__(1);
 
 var Danger = {
@@ -17022,11 +17031,11 @@ var ReactDOMInput = __webpack_require__(148);
 var ReactDOMOption = __webpack_require__(149);
 var ReactDOMSelect = __webpack_require__(85);
 var ReactDOMTextarea = __webpack_require__(150);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 var ReactMultiChild = __webpack_require__(86);
 var ReactServerRenderingTransaction = __webpack_require__(159);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var escapeTextContentForBrowser = __webpack_require__(38);
 var invariant = __webpack_require__(1);
 var isEventSupported = __webpack_require__(46);
@@ -18049,7 +18058,7 @@ module.exports = AutoFocusUtils;
 
 var CSSProperty = __webpack_require__(82);
 var ExecutionEnvironment = __webpack_require__(9);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 
 var camelizeStyleName = __webpack_require__(139);
 var dangerousStyleValue = __webpack_require__(141);
@@ -18999,7 +19008,7 @@ module.exports = ReactDOMInput;
 
 var _assign = __webpack_require__(6);
 
-var React = __webpack_require__(20);
+var React = __webpack_require__(21);
 var ReactDOMComponentTree = __webpack_require__(7);
 var ReactDOMSelect = __webpack_require__(85);
 
@@ -19303,7 +19312,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(11);
+  ReactComponentTreeHook = __webpack_require__(12);
 }
 
 function instantiateChild(childInstances, child, name, selfDebugID) {
@@ -19311,7 +19320,7 @@ function instantiateChild(childInstances, child, name, selfDebugID) {
   var keyUnique = childInstances[name] === undefined;
   if (process.env.NODE_ENV !== 'production') {
     if (!ReactComponentTreeHook) {
-      ReactComponentTreeHook = __webpack_require__(11);
+      ReactComponentTreeHook = __webpack_require__(12);
     }
     if (!keyUnique) {
       process.env.NODE_ENV !== 'production' ? warning(false, 'flattenChildren(...): Encountered two children with the same key, ' + '`%s`. Child keys must be unique; when two children share a key, only ' + 'the first child will be used.%s', KeyEscapeUtils.unescape(name), ReactComponentTreeHook.getStackAddendumByID(selfDebugID)) : void 0;
@@ -19447,12 +19456,12 @@ module.exports = ReactChildReconciler;
 var _prodInvariant = __webpack_require__(4),
     _assign = __webpack_require__(6);
 
-var React = __webpack_require__(20);
+var React = __webpack_require__(21);
 var ReactComponentEnvironment = __webpack_require__(52);
 var ReactCurrentOwner = __webpack_require__(16);
 var ReactErrorUtils = __webpack_require__(44);
 var ReactInstanceMap = __webpack_require__(27);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 var ReactNodeTypes = __webpack_require__(88);
 var ReactReconciler = __webpack_require__(25);
 
@@ -20364,7 +20373,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(11);
+  ReactComponentTreeHook = __webpack_require__(12);
 }
 
 var loggedTypeFailures = {};
@@ -20406,7 +20415,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         if (process.env.NODE_ENV !== 'production') {
           if (!ReactComponentTreeHook) {
-            ReactComponentTreeHook = __webpack_require__(11);
+            ReactComponentTreeHook = __webpack_require__(12);
           }
           if (debugID !== null) {
             componentStackInfo = ReactComponentTreeHook.getStackAddendumByID(debugID);
@@ -20572,7 +20581,7 @@ if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 't
   // https://github.com/facebook/react/issues/7240
   // Remove the inline requires when we don't need them anymore:
   // https://github.com/facebook/react/pull/7178
-  ReactComponentTreeHook = __webpack_require__(11);
+  ReactComponentTreeHook = __webpack_require__(12);
 }
 
 /**
@@ -20588,7 +20597,7 @@ function flattenSingleChildIntoContext(traverseContext, child, name, selfDebugID
     var keyUnique = result[name] === undefined;
     if (process.env.NODE_ENV !== 'production') {
       if (!ReactComponentTreeHook) {
-        ReactComponentTreeHook = __webpack_require__(11);
+        ReactComponentTreeHook = __webpack_require__(12);
       }
       if (!keyUnique) {
         process.env.NODE_ENV !== 'production' ? warning(false, 'flattenChildren(...): Encountered two children with the same key, ' + '`%s`. Child keys must be unique; when two children share a key, only ' + 'the first child will be used.%s', KeyEscapeUtils.unescape(name), ReactComponentTreeHook.getStackAddendumByID(selfDebugID)) : void 0;
@@ -20641,9 +20650,9 @@ module.exports = flattenChildren;
 
 var _assign = __webpack_require__(6);
 
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 var Transaction = __webpack_require__(35);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 var ReactServerUpdateQueue = __webpack_require__(160);
 
 /**
@@ -21250,7 +21259,7 @@ var _assign = __webpack_require__(6);
 var ReactUpdates = __webpack_require__(15);
 var Transaction = __webpack_require__(35);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 
 var RESET_BATCHED_UPDATES = {
   initialize: emptyFunction,
@@ -21320,7 +21329,7 @@ var _assign = __webpack_require__(6);
 
 var EventListener = __webpack_require__(92);
 var ExecutionEnvironment = __webpack_require__(9);
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 var ReactDOMComponentTree = __webpack_require__(7);
 var ReactUpdates = __webpack_require__(15);
 
@@ -21556,10 +21565,10 @@ module.exports = ReactInjection;
 var _assign = __webpack_require__(6);
 
 var CallbackQueue = __webpack_require__(75);
-var PooledClass = __webpack_require__(22);
+var PooledClass = __webpack_require__(23);
 var ReactBrowserEventEmitter = __webpack_require__(39);
 var ReactInputSelection = __webpack_require__(93);
-var ReactInstrumentation = __webpack_require__(13);
+var ReactInstrumentation = __webpack_require__(14);
 var Transaction = __webpack_require__(35);
 var ReactUpdateQueue = __webpack_require__(56);
 
@@ -22640,7 +22649,7 @@ var SyntheticTransitionEvent = __webpack_require__(184);
 var SyntheticUIEvent = __webpack_require__(31);
 var SyntheticWheelEvent = __webpack_require__(185);
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var getEventCharCode = __webpack_require__(58);
 var invariant = __webpack_require__(1);
 
@@ -23620,7 +23629,7 @@ module.exports = ReactMount.renderSubtreeIntoContainer;
 
 var DOMProperty = __webpack_require__(18);
 var EventPluginRegistry = __webpack_require__(34);
-var ReactComponentTreeHook = __webpack_require__(11);
+var ReactComponentTreeHook = __webpack_require__(12);
 
 var warning = __webpack_require__(2);
 
@@ -23734,7 +23743,7 @@ module.exports = ReactDOMUnknownPropertyHook;
 
 
 
-var ReactComponentTreeHook = __webpack_require__(11);
+var ReactComponentTreeHook = __webpack_require__(12);
 
 var warning = __webpack_require__(2);
 
@@ -23782,7 +23791,7 @@ module.exports = ReactDOMNullInputValuePropHook;
 
 
 var DOMProperty = __webpack_require__(18);
-var ReactComponentTreeHook = __webpack_require__(11);
+var ReactComponentTreeHook = __webpack_require__(12);
 
 var warning = __webpack_require__(2);
 
@@ -23875,29 +23884,31 @@ var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var grid_1 = __webpack_require__(202);
 var icon_1 = __webpack_require__(32);
-var const_1 = __webpack_require__(23);
+var const_1 = __webpack_require__(19);
 var element_1 = __webpack_require__(203);
 var circuit_1 = __webpack_require__(204);
 var en_US_1 = __webpack_require__(60);
 var parse_1 = __webpack_require__(61);
-var buttonComponent_1 = __webpack_require__(214);
-var capacitor_1 = __webpack_require__(215);
-var card_1 = __webpack_require__(216);
-var cardacinput_1 = __webpack_require__(218);
-var cardtraninput_1 = __webpack_require__(219);
-var diode_1 = __webpack_require__(220);
-var graph_1 = __webpack_require__(221);
-var ground_1 = __webpack_require__(222);
-var inductor_1 = __webpack_require__(223);
-var nfet_1 = __webpack_require__(224);
-var opamp_1 = __webpack_require__(225);
-var pfet_1 = __webpack_require__(226);
-var probe_1 = __webpack_require__(227);
-var resistor_1 = __webpack_require__(228);
-var select_1 = __webpack_require__(229);
-var sline_1 = __webpack_require__(230);
-var sourcei_1 = __webpack_require__(231);
-var sourcev_1 = __webpack_require__(232);
+var Ammeter_1 = __webpack_require__(214);
+var buttonComponent_1 = __webpack_require__(215);
+var capacitor_1 = __webpack_require__(216);
+var card_1 = __webpack_require__(217);
+var cardacinput_1 = __webpack_require__(219);
+var cardtraninput_1 = __webpack_require__(220);
+var diode_1 = __webpack_require__(221);
+var graph_1 = __webpack_require__(222);
+var ground_1 = __webpack_require__(223);
+var inductor_1 = __webpack_require__(224);
+var label_1 = __webpack_require__(225);
+var nfet_1 = __webpack_require__(226);
+var opamp_1 = __webpack_require__(227);
+var pfet_1 = __webpack_require__(228);
+var probe_1 = __webpack_require__(229);
+var resistor_1 = __webpack_require__(230);
+var select_1 = __webpack_require__(231);
+var sline_1 = __webpack_require__(232);
+var sourcei_1 = __webpack_require__(233);
+var sourcev_1 = __webpack_require__(234);
 var helper_1 = __webpack_require__(10);
 var App = /** @class */ (function (_super) {
     tslib_1.__extends(App, _super);
@@ -23930,7 +23941,6 @@ var App = /** @class */ (function (_super) {
     App.prototype.render = function () {
         var _this = this;
         var elements = this.renderElements();
-        // this.updateTypePoint();
         return (React.createElement("div", { className: "noselect" },
             React.createElement("table", { className: "shematic-table" },
                 React.createElement("tbody", null,
@@ -23999,22 +24009,27 @@ var App = /** @class */ (function (_super) {
                                     }) : null)))),
                         React.createElement("td", { className: "shematic-menu-right" },
                             React.createElement("div", { className: "shematic-button-component" },
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: opamp_1.OpAmp, app: this, scale: 0.8, x: 0, y: 18, comment: "OpAmp", name: "opamp" }),
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: ground_1.Ground, app: this, scale: 1, x: 20, y: 18, comment: "Ground", name: "ground" })),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: ground_1.Ground, app: this, scale: 1, x: 20, y: 18, comment: "Ground", name: "ground" }),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: nfet_1.NFet, app: this, scale: 0.8, x: 35, y: 0, comment: "NFet", name: "nfet" })),
                             React.createElement("div", { className: "shematic-button-component" },
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: probe_1.Probe, app: this, scale: 1, x: 8, y: 32, comment: "Probe", name: "probe" }),
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: diode_1.Diode, app: this, scale: 1, x: 21, y: 0, comment: "Diode", name: "diode" })),
-                            React.createElement("div", { className: "shematic-button-component" },
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: nfet_1.NFet, app: this, scale: 0.8, x: 35, y: 0, comment: "NFet", name: "nfet" }),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: label_1.Label, app: this, scale: 1, x: 20, y: 18, comment: "Node label", name: "label" }),
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: pfet_1.PFet, app: this, scale: 0.8, x: 35, y: 0, comment: "PFet", name: "pfet" })),
                             React.createElement("div", { className: "shematic-button-component" },
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: capacitor_1.Capacitor, app: this, scale: 0.8, x: 21, y: 0, comment: "Capacitor", name: "capacitor" }),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: sourcev_1.SourceV, app: this, scale: 0.8, x: 21, y: 0, comment: "Voltage source", name: "sourcev" }),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: probe_1.Probe, app: this, scale: 1, x: 8, y: 32, comment: "Probe", name: "probe" })),
+                            React.createElement("div", { className: "shematic-button-component" },
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: sourcei_1.SourceI, app: this, scale: 0.8, x: 21, y: 0, comment: "Current source", name: "sourcei" }),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: Ammeter_1.Ammeter, app: this, scale: 1, x: 15, y: 20, comment: "Current probe", name: "ammeter" })),
+                            React.createElement("div", { className: "shematic-button-component" },
                                 React.createElement(buttonComponent_1.ButtonComponent, { component: resistor_1.Resistor, app: this, scale: 0.8, x: 21, y: 0, comment: "Resistor", name: "resistor" })),
                             React.createElement("div", { className: "shematic-button-component" },
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: sourcev_1.SourceV, app: this, scale: 0.8, x: 21, y: 0, comment: "Voltage source", name: "sourcev" }),
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: sourcei_1.SourceI, app: this, scale: 0.8, x: 21, y: 0, comment: "Current source", name: "sourcei" })),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: capacitor_1.Capacitor, app: this, scale: 0.8, x: 21, y: 0, comment: "Capacitor", name: "capacitor" })),
                             React.createElement("div", { className: "shematic-button-component" },
-                                React.createElement(buttonComponent_1.ButtonComponent, { component: inductor_1.Inductor, app: this, scale: 0.8, x: 21, y: 0, comment: "Inductor", name: "inductor" })))),
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: inductor_1.Inductor, app: this, scale: 0.8, x: 21, y: 0, comment: "Inductor", name: "inductor" })),
+                            React.createElement("div", { className: "shematic-button-component" },
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: opamp_1.OpAmp, app: this, scale: 0.8, x: 0, y: 18, comment: "OpAmp", name: "opamp" })),
+                            React.createElement("div", { className: "shematic-button-component" },
+                                React.createElement(buttonComponent_1.ButtonComponent, { component: diode_1.Diode, app: this, scale: 1, x: 21, y: 0, comment: "Diode", name: "diode" })))),
                     React.createElement("tr", null,
                         React.createElement("td", { colSpan: 3 },
                             React.createElement("div", null,
@@ -24097,6 +24112,12 @@ var App = /** @class */ (function (_super) {
                     break;
                 case "sourcei":
                     ElClass = sourcei_1.SourceI;
+                    break;
+                case "label":
+                    ElClass = label_1.Label;
+                    break;
+                case "ammeter":
+                    ElClass = Ammeter_1.Ammeter;
                     break;
                 default:
                     throw new Error("undestend type");
@@ -24204,6 +24225,7 @@ var App = /** @class */ (function (_super) {
         }
         else {
             this.changePoint = true;
+            this.setState({});
         }
         if (this.state.line) {
             var eLine = new element_1.Element();
@@ -24386,6 +24408,8 @@ var App = /** @class */ (function (_super) {
     App.prototype.onNewElement = function (type) {
         var el = new element_1.Element();
         el.type = type;
+        // el.x = 720 / this.state.scale - this.state.shiftX;
+        // el.y = 48 / this.state.scale - this.state.shiftY;
         el.x = 24;
         el.y = 24;
         this.state.elements.push(el);
@@ -43023,7 +43047,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 
 
-var emptyFunction = __webpack_require__(12);
+var emptyFunction = __webpack_require__(13);
 var invariant = __webpack_require__(1);
 var ReactPropTypesSecret = __webpack_require__(42);
 
@@ -43119,7 +43143,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(23);
+var const_1 = __webpack_require__(19);
 var Grid = /** @class */ (function (_super) {
     tslib_1.__extends(Grid, _super);
     function Grid(props) {
@@ -44474,7 +44498,7 @@ exports.mat_copy_transposed = mat_copy_transposed;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var Capacitor = /** @class */ (function (_super) {
     tslib_1.__extends(Capacitor, _super);
     function Capacitor(n1, n2, v) {
@@ -44510,7 +44534,7 @@ exports.Capacitor = Capacitor;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var Diode = /** @class */ (function (_super) {
     tslib_1.__extends(Diode, _super);
     function Diode(n1, n2, v, type) {
@@ -44576,7 +44600,7 @@ exports.Diode = Diode;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var Fet = /** @class */ (function (_super) {
     tslib_1.__extends(Fet, _super);
     function Fet(d, g, s, ratio, name, type) {
@@ -44652,7 +44676,7 @@ exports.Fet = Fet;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var Inductor = /** @class */ (function (_super) {
     tslib_1.__extends(Inductor, _super);
     function Inductor(n1, n2, branch, v) {
@@ -44695,7 +44719,7 @@ exports.Inductor = Inductor;
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var sources_1 = __webpack_require__(97);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var ISource = /** @class */ (function (_super) {
     tslib_1.__extends(ISource, _super);
     function ISource(npos, nneg, v) {
@@ -44745,7 +44769,7 @@ exports.ISource = ISource;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var Opamp = /** @class */ (function (_super) {
     tslib_1.__extends(Opamp, _super);
     function Opamp(np, nn, no, ng, branch, A, name) {
@@ -44791,7 +44815,7 @@ exports.Opamp = Opamp;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var Resistor = /** @class */ (function (_super) {
     tslib_1.__extends(Resistor, _super);
     function Resistor(n1, n2, v) {
@@ -44828,7 +44852,7 @@ exports.Resistor = Resistor;
 Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var sources_1 = __webpack_require__(97);
-var device_1 = __webpack_require__(19);
+var device_1 = __webpack_require__(20);
 var VSource = /** @class */ (function (_super) {
     tslib_1.__extends(VSource, _super);
     function VSource(npos, nneg, branch, v) {
@@ -44886,7 +44910,108 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(23);
+var const_1 = __webpack_require__(19);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(11);
+var Ammeter = /** @class */ (function (_super) {
+    tslib_1.__extends(Ammeter, _super);
+    function Ammeter(props) {
+        var _this = _super.call(this, props) || this;
+        _this.type = "a";
+        _this.properties = {
+            color: {
+                label: "Color",
+                type: "select",
+                items: ["red", "green", "blue", "cyan", "magenta", "yellow", "black"],
+            },
+            offset: {
+                label: "Offset",
+                type: "text",
+            },
+        };
+        _this.state = {
+            color: "magenta",
+            offset: "0",
+        };
+        return _this;
+    }
+    Ammeter.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
+    /**
+     * return [color, current_label, offset, type] for this probe
+     */
+    Ammeter.prototype.probeInfo = function () {
+        this.getProperties();
+        var color = this.properties["color"].value;
+        var offset = this.properties["offset"].value;
+        if (offset === undefined || offset === "") {
+            offset = "0";
+        }
+        return [color, this.label().label, offset, "current"];
+    };
+    /**
+     * display current for DC analysis
+     */
+    Ammeter.prototype.DisplayCurrent = function () {
+        var label = this.label();
+        var v = this.props.app.operating_point[label];
+        if (v !== undefined) {
+            var i = helper_1.EngineeringNotation(v, 2) + "A";
+            var result = [React.createElement(react_konva_1.Text, { text: i, x: 0, y: -13, width: 16, fontSize: 10, fill: "red", align: "center" })];
+            return result;
+        }
+    };
+    Ammeter.prototype.label = function () {
+        var name = this.properties["name"];
+        var label = "I(" + (name ? name : "_" + this.jsonIndex) + ")";
+        return label;
+    };
+    Ammeter.prototype.json = function (index) {
+        this.jsonIndex = index;
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { color: this.state.color, offset: this.state.offset, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    Ammeter.prototype.getPoints = function () {
+        return [this.refs.con1, this.refs.con2];
+    };
+    Ammeter.prototype.render = function () {
+        var _this = this;
+        this.bundle = helper_1.PrepareBundle(-3, -1, 19, 6, this.props);
+        var argsText = helper_1.PrepareTextProps(this.props);
+        var argsLine = helper_1.PrepareLineProps(this.props);
+        var argsCommon = helper_1.PrepareCommonProps(this.props);
+        return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 16, 0] }, argsLine)),
+            React.createElement(react_konva_1.Line, { points: [6, -3, 10, 0, 6, 3], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.state.color, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+            React.createElement(react_konva_1.Rect, { x: -3, y: -1, width: 19, height: 6, onMouseDown: this.props.onClick }),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ x: 16, y: 0, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
+            this.props.dc ? this.DisplayCurrent() : null));
+    };
+    return Ammeter;
+}(React.Component));
+exports.Ammeter = Ammeter;
+
+
+/***/ }),
+/* 215 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(3);
+var React = __webpack_require__(5);
+var react_konva_1 = __webpack_require__(8);
+var const_1 = __webpack_require__(19);
 var ButtonComponent = /** @class */ (function (_super) {
     tslib_1.__extends(ButtonComponent, _super);
     function ButtonComponent(props) {
@@ -44905,7 +45030,7 @@ exports.ButtonComponent = ButtonComponent;
 
 
 /***/ }),
-/* 215 */
+/* 216 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -44915,7 +45040,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var Capacitor = /** @class */ (function (_super) {
     tslib_1.__extends(Capacitor, _super);
     function Capacitor(props) {
@@ -44986,7 +45111,7 @@ exports.Capacitor = Capacitor;
 
 
 /***/ }),
-/* 216 */
+/* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -45099,7 +45224,7 @@ exports.Card = Card;
 
 
 /***/ }),
-/* 217 */
+/* 218 */
 /***/ (function(module, exports, __webpack_require__) {
 
 (function webpackUniversalModuleDefinition(root, factory) {
@@ -47724,7 +47849,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 218 */
+/* 219 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47773,7 +47898,7 @@ exports.CardACInput = CardACInput;
 
 
 /***/ }),
-/* 219 */
+/* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47814,7 +47939,7 @@ exports.CardTranInput = CardTranInput;
 
 
 /***/ }),
-/* 220 */
+/* 221 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47824,7 +47949,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var Diode = /** @class */ (function (_super) {
     tslib_1.__extends(Diode, _super);
     function Diode(props) {
@@ -47899,7 +48024,7 @@ exports.Diode = Diode;
 
 
 /***/ }),
-/* 221 */
+/* 222 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -47909,7 +48034,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var const_1 = __webpack_require__(59);
-var const_2 = __webpack_require__(23);
+var const_2 = __webpack_require__(19);
 var helper_1 = __webpack_require__(10);
 var dialog_1 = __webpack_require__(40);
 var Graph = /** @class */ (function (_super) {
@@ -48280,7 +48405,7 @@ exports.GraphOver = GraphOver;
 
 
 /***/ }),
-/* 222 */
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48290,7 +48415,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var Ground = /** @class */ (function (_super) {
     tslib_1.__extends(Ground, _super);
     function Ground(props) {
@@ -48337,7 +48462,7 @@ exports.Ground = Ground;
 
 
 /***/ }),
-/* 223 */
+/* 224 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48347,7 +48472,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var Inductor = /** @class */ (function (_super) {
     tslib_1.__extends(Inductor, _super);
     function Inductor(props) {
@@ -48414,7 +48539,7 @@ exports.Inductor = Inductor;
 
 
 /***/ }),
-/* 224 */
+/* 225 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48424,7 +48549,73 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
+var Label = /** @class */ (function (_super) {
+    tslib_1.__extends(Label, _super);
+    function Label(props) {
+        var _this = _super.call(this, props) || this;
+        _this.type = "L";
+        _this.properties = {
+            label: {
+                label: "Label",
+                type: "text",
+            },
+        };
+        _this.state = {
+            label: "???",
+        };
+        return _this;
+    }
+    Label.prototype.getProperties = function () {
+        for (var key in this.state) {
+            if (this.properties[key]) {
+                this.properties[key].value = this.state[key];
+            }
+        }
+        return this.properties;
+    };
+    Label.prototype.json = function (index) {
+        return [this.type,
+            [this.props.x, this.props.y, this.props.rotation],
+            { label: this.state.label, c: this.state.c, _json_: index },
+            this.getPoints().map(function (con) { return con.label; })];
+    };
+    Label.prototype.getPoints = function () {
+        return [this.refs.con1];
+    };
+    Label.prototype.render = function () {
+        var _this = this;
+        this.bundle = helper_1.PrepareBundle(-3, 0, 6, 8, this.props);
+        var argsText = helper_1.PrepareTextProps(this.props);
+        var argsLine = helper_1.PrepareLineProps(this.props);
+        var argsCommon = helper_1.PrepareCommonProps(this.props);
+        return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
+            React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 8] }, argsLine)),
+            React.createElement(react_konva_1.Rect, { x: -3, y: 0, width: 6, height: 8, onMouseDown: this.props.onClick }),
+            React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ ref: "con1", parent: this, rotation: this.props.rotation, x: 0, y: 0 }, argsLine, { onConnectorMouseDown: function (e, lx, ly) {
+                    _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale));
+                } })),
+            this.state.label && !this.props.offText ?
+                React.createElement(react_konva_1.Text, { text: this.state.label, x: -10, y: 9, width: 20, fontSize: 10, fill: "black", align: "center" }) :
+                null));
+    };
+    return Label;
+}(React.Component));
+exports.Label = Label;
+
+
+/***/ }),
+/* 226 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var tslib_1 = __webpack_require__(3);
+var React = __webpack_require__(5);
+var react_konva_1 = __webpack_require__(8);
+var helper_1 = __webpack_require__(10);
+var connection_point_1 = __webpack_require__(11);
 var NFet = /** @class */ (function (_super) {
     tslib_1.__extends(NFet, _super);
     function NFet(props) {
@@ -48496,7 +48687,7 @@ exports.NFet = NFet;
 
 
 /***/ }),
-/* 225 */
+/* 227 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48506,7 +48697,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var OpAmp = /** @class */ (function (_super) {
     tslib_1.__extends(OpAmp, _super);
     function OpAmp(props) {
@@ -48576,7 +48767,7 @@ exports.OpAmp = OpAmp;
 
 
 /***/ }),
-/* 226 */
+/* 228 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48586,7 +48777,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var PFet = /** @class */ (function (_super) {
     tslib_1.__extends(PFet, _super);
     function PFet(props) {
@@ -48659,7 +48850,7 @@ exports.PFet = PFet;
 
 
 /***/ }),
-/* 227 */
+/* 229 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48669,7 +48860,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var Probe = /** @class */ (function (_super) {
     tslib_1.__extends(Probe, _super);
     function Probe(props) {
@@ -48745,7 +48936,7 @@ exports.Probe = Probe;
 
 
 /***/ }),
-/* 228 */
+/* 230 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48755,7 +48946,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var Resistor = /** @class */ (function (_super) {
     tslib_1.__extends(Resistor, _super);
     function Resistor(props) {
@@ -48826,7 +49017,7 @@ exports.Resistor = Resistor;
 
 
 /***/ }),
-/* 229 */
+/* 231 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48852,7 +49043,7 @@ exports.Select = Select;
 
 
 /***/ }),
-/* 230 */
+/* 232 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48862,7 +49053,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var SLine = /** @class */ (function (_super) {
     tslib_1.__extends(SLine, _super);
     function SLine(props) {
@@ -48895,7 +49086,7 @@ exports.SLine = SLine;
 
 
 /***/ }),
-/* 231 */
+/* 233 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -48905,7 +49096,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var SourceI = /** @class */ (function (_super) {
     tslib_1.__extends(SourceI, _super);
     function SourceI(props) {
@@ -49135,7 +49326,7 @@ exports.SourceI = SourceI;
 
 
 /***/ }),
-/* 232 */
+/* 234 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -49144,9 +49335,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(23);
+var const_1 = __webpack_require__(19);
 var helper_1 = __webpack_require__(10);
-var connection_point_1 = __webpack_require__(14);
+var connection_point_1 = __webpack_require__(11);
 var SourceV = /** @class */ (function (_super) {
     tslib_1.__extends(SourceV, _super);
     function SourceV(props) {
