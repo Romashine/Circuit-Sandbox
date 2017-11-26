@@ -23984,11 +23984,11 @@ var App = /** @class */ (function (_super) {
                                 React.createElement(icon_1.Icon, { name: "link" })),
                             React.createElement("div", { onClick: this.save_netlist.bind(this) },
                                 React.createElement(icon_1.Icon, { name: "save" })),
-                            React.createElement("div", { onClick: undefined },
+                            React.createElement("div", { onClick: this.cut.bind(this) },
                                 React.createElement(icon_1.Icon, { name: "content_cut" })),
-                            React.createElement("div", { onClick: undefined },
+                            React.createElement("div", { onClick: this.copy.bind(this) },
                                 React.createElement(icon_1.Icon, { name: "content_copy" })),
-                            React.createElement("div", { onClick: undefined },
+                            React.createElement("div", { onClick: this.paste.bind(this) },
                                 React.createElement(icon_1.Icon, { name: "content_paste" })),
                             React.createElement("div", { onClick: this.onDeleteElement.bind(this) },
                                 React.createElement(icon_1.Icon, { name: "delete_forever" })),
@@ -24499,6 +24499,15 @@ var App = /** @class */ (function (_super) {
                 });
             }
         });
+        indexes.sort(function (a, b) {
+            if (a < b) {
+                return 1;
+            }
+            if (a > b) {
+                return -1;
+            }
+            return 0;
+        });
         indexes.forEach(function (index) { return ArrayRemove(_this.state.elements, index); });
     };
     App.prototype.lineRedrawOnPoint = function () {
@@ -24533,6 +24542,15 @@ var App = /** @class */ (function (_super) {
                     }
                 }
             });
+        });
+        indexes.sort(function (a, b) {
+            if (a < b) {
+                return 1;
+            }
+            if (a > b) {
+                return -1;
+            }
+            return 0;
         });
         if (indexes.length) {
             indexes.forEach(function (index) {
@@ -24653,6 +24671,144 @@ var App = /** @class */ (function (_super) {
         }
         this.setState({});
     };
+    //#region HotKey
+    // process keystrokes, consuming those that are meaningful to us
+    App.prototype.schematic_key_down = function (event) {
+        if (!event) {
+            event = window.event;
+        }
+        var sch = event.target.schematic;
+        var code = event.keyCode;
+        // keep track of modifier key state
+        if (code === 16) {
+            sch.shiftKey = true;
+        }
+        else if (code === 17) {
+            sch.ctrlKey = true;
+        }
+        else if (code === 18) {
+            sch.altKey = true;
+        }
+        else if (code === 91) {
+            sch.cmdKey = true;
+        }
+        else if (code === 8 || code === 46) {
+            // delete selected components
+            for (var i = sch.components.length - 1; i >= 0; --i) {
+                var component = sch.components[i];
+                if (component.selected) {
+                    component.remove();
+                }
+            }
+            sch.clean_up_wires();
+            sch.redraw_background();
+            event.preventDefault();
+            return false;
+        }
+        else if ((sch.ctrlKey || sch.cmdKey) && code === 88) {
+            // cmd/ctrl x: cut
+            sch.cut();
+            event.preventDefault();
+            return false;
+        }
+        else if ((sch.ctrlKey || sch.cmdKey) && code === 67) {
+            // cmd/ctrl c: copy
+            sch.copy();
+            event.preventDefault();
+            return false;
+        }
+        else if ((sch.ctrlKey || sch.cmdKey) && code === 86) {
+            // cmd/ctrl v: paste
+            sch.paste();
+            event.preventDefault();
+            return false;
+        }
+        else if (!sch.ctrlKey && !sch.altKey && !sch.cmdKey && code === 82) {
+            // 'r': rotate component
+            sch.rotate_selected();
+            event.preventDefault();
+            return false;
+        }
+        else {
+            return true;
+        }
+        // consume keystroke
+        sch.redraw();
+        event.preventDefault();
+        return false;
+    };
+    //#endregion
+    //#region Copy, Pust, Cut
+    App.prototype.cut = function () {
+        var _this = this;
+        // clear previous contents
+        this.sch_clipboard = [];
+        var indexes = [];
+        // look for selected components, move them to clipboard.
+        this.state.elements.forEach(function (element, index) {
+            if (element.selected === true) {
+                _this.sch_clipboard.push(element);
+                indexes.push(index);
+            }
+        });
+        indexes.sort(function (a, b) {
+            if (a < b) {
+                return 1;
+            }
+            if (a > b) {
+                return -1;
+            }
+            return 0;
+        });
+        if (indexes.length !== 0) {
+            indexes.forEach(function (index) { return ArrayRemove(_this.state.elements, index); });
+        }
+        // update diagram view
+        this.setState({});
+    };
+    App.prototype.copy = function () {
+        var _this = this;
+        // clear previous contents
+        this.sch_clipboard = [];
+        // look for selected components, move them to clipboard.
+        this.state.elements.forEach(function (element) {
+            if (element.selected === true) {
+                _this.sch_clipboard.push(element);
+            }
+        });
+        this.setState({});
+    };
+    App.prototype.paste = function () {
+        var _this = this;
+        // clear current selections
+        this.unselectAll();
+        // compute left,top of bounding box for origins of
+        // components in the clipboard
+        var left;
+        var top;
+        var index = this.state.elements.length;
+        if (this.sch_clipboard.length) {
+            var json = this.json(this.sch_clipboard);
+            var newElement = this.jsonInElements(json);
+            newElement.forEach(function (element) {
+                if (element.type === "sline") {
+                    element.x = element.x - _this.state.shiftX - 24 - _this.state.shiftX;
+                    element.y = element.y - _this.state.shiftY - 24 - _this.state.shiftY;
+                    element.endX = element.x - _this.state.shiftX - 24 - _this.state.shiftX;
+                    element.endY = element.y - _this.state.shiftY - 24 - _this.state.shiftY;
+                }
+                else {
+                    element.x = element.x - _this.state.shiftX - 24 - _this.state.shiftX;
+                    element.y = element.y - _this.state.shiftY - 24 - _this.state.shiftY;
+                }
+                element.selected = true;
+                _this.state.elements.push(element);
+            });
+            this.changePoint = true;
+        }
+        this.setState({ elements: this.state.elements });
+    };
+    //#endregion
     //#region Navigation button
     App.prototype.onRotateClick = function () {
         this.state.elements.forEach(function (element) {
@@ -24786,68 +24942,73 @@ var App = /** @class */ (function (_super) {
             // convert string value into data structure
             var json = JSON.parse(value);
             // top level is a list of components
-            for (var i = json.length - 1; i >= 0; --i) {
-                var c = json[i];
-                if (c[0] === "view") {
-                    this.ac_fstart = c[5];
-                    this.ac_fstop = c[6];
-                    this.ac_source_name = c[7];
-                    this.tran_npts = c[8];
-                    this.tran_tstop = c[9];
-                    this.dc_max_iters = c[10];
-                }
-                else {
-                    switch (c[0]) {
-                        case "w":
-                            elements.push(sline_1.SLine.parse(c));
-                            break;
-                        case "c":
-                            elements.push(capacitor_1.Capacitor.parse(c));
-                            break;
-                        case "o":
-                            elements.push(opamp_1.OpAmp.parse(c));
-                            break;
-                        case "g":
-                            elements.push(ground_1.Ground.parse(c));
-                            break;
-                        case "s":
-                            elements.push(probe_1.Probe.parse(c));
-                            break;
-                        case "d":
-                            elements.push(diode_1.Diode.parse(c));
-                            break;
-                        case "n":
-                            elements.push(nfet_1.NFet.parse(c));
-                            break;
-                        case "p":
-                            elements.push(pfet_1.PFet.parse(c));
-                            break;
-                        case "r":
-                            elements.push(resistor_1.Resistor.parse(c));
-                            break;
-                        case "l":
-                            elements.push(inductor_1.Inductor.parse(c));
-                            break;
-                        case "v":
-                            elements.push(sourcev_1.SourceV.parse(c));
-                            break;
-                        case "i":
-                            elements.push(sourcei_1.SourceI.parse(c));
-                            break;
-                        case "a":
-                            elements.push(Ammeter_1.Ammeter.parse(c));
-                            break;
-                        case "L":
-                            elements.push(label_1.Label.parse(c));
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
+            elements = this.jsonInElements(json);
         }
         this.changePoint = true;
         this.setState({ elements: elements });
+    };
+    App.prototype.jsonInElements = function (json) {
+        var elements = [];
+        for (var i = json.length - 1; i >= 0; --i) {
+            var c = json[i];
+            if (c[0] === "view") {
+                this.ac_fstart = c[5];
+                this.ac_fstop = c[6];
+                this.ac_source_name = c[7];
+                this.tran_npts = c[8];
+                this.tran_tstop = c[9];
+                this.dc_max_iters = c[10];
+            }
+            else {
+                switch (c[0]) {
+                    case "w":
+                        elements.push(sline_1.SLine.parse(c));
+                        break;
+                    case "c":
+                        elements.push(capacitor_1.Capacitor.parse(c));
+                        break;
+                    case "o":
+                        elements.push(opamp_1.OpAmp.parse(c));
+                        break;
+                    case "g":
+                        elements.push(ground_1.Ground.parse(c));
+                        break;
+                    case "s":
+                        elements.push(probe_1.Probe.parse(c));
+                        break;
+                    case "d":
+                        elements.push(diode_1.Diode.parse(c));
+                        break;
+                    case "n":
+                        elements.push(nfet_1.NFet.parse(c));
+                        break;
+                    case "p":
+                        elements.push(pfet_1.PFet.parse(c));
+                        break;
+                    case "r":
+                        elements.push(resistor_1.Resistor.parse(c));
+                        break;
+                    case "l":
+                        elements.push(inductor_1.Inductor.parse(c));
+                        break;
+                    case "v":
+                        elements.push(sourcev_1.SourceV.parse(c));
+                        break;
+                    case "i":
+                        elements.push(sourcei_1.SourceI.parse(c));
+                        break;
+                    case "a":
+                        elements.push(Ammeter_1.Ammeter.parse(c));
+                        break;
+                    case "L":
+                        elements.push(label_1.Label.parse(c));
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return elements;
     };
     //#endregion
     App.prototype.onConnectorMouseDown = function (e, layerX, layerY) {
