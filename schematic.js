@@ -23942,6 +23942,11 @@ var App = /** @class */ (function (_super) {
         _this.dc_max_iters = "1000";
         _this.submit_analyses = undefined;
         _this.transient_results = {};
+        // state of modifier keys
+        _this.ctrlKey = false;
+        _this.shiftKey = false;
+        _this.altKey = false;
+        _this.cmdKey = false;
         // URL of ciruit sandbox simluator, used to create shareable link.
         _this.strSimulator = "http://spinningnumbers.org/circuit-sandbox/index.html";
         _this.state = {
@@ -23957,8 +23962,17 @@ var App = /** @class */ (function (_super) {
             dcLabels: [],
             dc: false,
         };
+        _this.schematic_key_down = _this.schematic_key_down.bind(_this);
+        _this.schematic_key_up = _this.schematic_key_up.bind(_this);
         return _this;
     }
+    App.prototype.componentDidMount = function () {
+        window.addEventListener("keydown", this.schematic_key_down);
+        window.addEventListener("keyup", this.schematic_key_up);
+    };
+    App.prototype.componentWillUnmount = function () {
+        // window.removeEventListener("keypress", this.onWindowKeyPress);
+    };
     App.prototype.render = function () {
         var _this = this;
         var elements = this.renderElements();
@@ -24674,58 +24688,47 @@ var App = /** @class */ (function (_super) {
     //#region HotKey
     // process keystrokes, consuming those that are meaningful to us
     App.prototype.schematic_key_down = function (event) {
-        if (!event) {
-            event = window.event;
-        }
-        var sch = event.target.schematic;
         var code = event.keyCode;
         // keep track of modifier key state
         if (code === 16) {
-            sch.shiftKey = true;
+            this.shiftKey = true;
         }
         else if (code === 17) {
-            sch.ctrlKey = true;
+            this.ctrlKey = true;
         }
         else if (code === 18) {
-            sch.altKey = true;
+            this.altKey = true;
         }
         else if (code === 91) {
-            sch.cmdKey = true;
+            this.cmdKey = true;
         }
         else if (code === 8 || code === 46) {
             // delete selected components
-            for (var i = sch.components.length - 1; i >= 0; --i) {
-                var component = sch.components[i];
-                if (component.selected) {
-                    component.remove();
-                }
-            }
-            sch.clean_up_wires();
-            sch.redraw_background();
+            this.onDeleteElement();
             event.preventDefault();
             return false;
         }
-        else if ((sch.ctrlKey || sch.cmdKey) && code === 88) {
+        else if ((this.ctrlKey || this.cmdKey) && code === 88) {
             // cmd/ctrl x: cut
-            sch.cut();
+            this.cut();
             event.preventDefault();
             return false;
         }
-        else if ((sch.ctrlKey || sch.cmdKey) && code === 67) {
+        else if ((this.ctrlKey || this.cmdKey) && code === 67) {
             // cmd/ctrl c: copy
-            sch.copy();
+            this.copy();
             event.preventDefault();
             return false;
         }
-        else if ((sch.ctrlKey || sch.cmdKey) && code === 86) {
+        else if ((this.ctrlKey || this.cmdKey) && code === 86) {
             // cmd/ctrl v: paste
-            sch.paste();
+            this.paste();
             event.preventDefault();
             return false;
         }
-        else if (!sch.ctrlKey && !sch.altKey && !sch.cmdKey && code === 82) {
+        else if (!this.ctrlKey && !this.altKey && !this.cmdKey && code === 82) {
             // 'r': rotate component
-            sch.rotate_selected();
+            this.onRotateClick();
             event.preventDefault();
             return false;
         }
@@ -24733,9 +24736,24 @@ var App = /** @class */ (function (_super) {
             return true;
         }
         // consume keystroke
-        sch.redraw();
+        this.setState({ elements: this.state.elements });
         event.preventDefault();
         return false;
+    };
+    App.prototype.schematic_key_up = function (event) {
+        var code = event.keyCode;
+        if (code === 16) {
+            this.shiftKey = false;
+        }
+        else if (code === 17) {
+            this.ctrlKey = false;
+        }
+        else if (code === 18) {
+            this.altKey = false;
+        }
+        else if (code === 91) {
+            this.cmdKey = false;
+        }
     };
     //#endregion
     //#region Copy, Pust, Cut
@@ -24784,9 +24802,6 @@ var App = /** @class */ (function (_super) {
         this.unselectAll();
         // compute left,top of bounding box for origins of
         // components in the clipboard
-        var left;
-        var top;
-        var index = this.state.elements.length;
         if (this.sch_clipboard.length) {
             var json = this.json(this.sch_clipboard);
             var newElement = this.jsonInElements(json);
@@ -25033,13 +25048,8 @@ var App = /** @class */ (function (_super) {
                 type: type,
             },
         });
-        // el.x = 720 / this.state.scale - this.state.shiftX;
-        // el.y = 48 / this.state.scale - this.state.shiftY;
-        // this.state.elements!.push(el);
-        // this.changePoint = true;
-        // this.setState({ elements: this.state.elements });
     };
-    App.prototype.onDeleteElement = function (element) {
+    App.prototype.onDeleteElement = function () {
         var _this = this;
         var indexes = [];
         this.state.elements.forEach(function (element, index) {
@@ -45712,7 +45722,7 @@ var Ammeter = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             color: "magenta",
             offset: "0",
         };
@@ -45901,7 +45911,11 @@ var Capacitor = /** @class */ (function (_super) {
                     _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale));
                 } })),
             this.state.c && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.c + "F", x: 9, y: 20, fontSize: 10, fill: "black" }) :
+                React.createElement(react_konva_1.Text, { text: this.state.c + "F", x: 9, y: 20, 
+                    // width={50} align={"center"}
+                    // offsetX={0} offsetY={0}
+                    // rotation={this.props.rotation! * (-1)}
+                    fontSize: 10, fill: "black" }) :
                 null,
             this.state.name && !this.props.offText ?
                 React.createElement(react_konva_1.Text, { text: this.state.name, x: -59, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
@@ -48774,7 +48788,7 @@ var Diode = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             area: "1",
             type: "normal",
             name: "",
@@ -48888,7 +48902,7 @@ var Graph = /** @class */ (function (_super) {
                 xGrid.push(React.createElement(react_konva_1.Line, { points: [temp, this.top_margin, temp, end], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1, dash: const_1.grid_pattern }));
             }
             // tick mark
-            xGrid.push(React.createElement(react_konva_1.Line, { points: [temp, end, temp, end + tick_length], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(x, 2), x: temp, y: end + tick_length }));
+            xGrid.push(React.createElement(react_konva_1.Line, { points: [temp, end, temp, end + tick_length], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(x, 2), x: temp - 3, y: end + tick_length }));
         }
         //#endregion
         //#region yGrid
@@ -48929,7 +48943,7 @@ var Graph = /** @class */ (function (_super) {
                     yGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin, temp, this.left_margin + pwidth, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1, dash: const_1.grid_pattern }));
                 }
                 // tick mark
-                yGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin - tick_length, temp, this.left_margin, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(y_1, 2), x: this.left_margin - tick_length - 2, y: temp }));
+                yGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin - tick_length, temp, this.left_margin, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(y_1, 2), x: this.left_margin - tick_length - 2 - 7, y: temp - 7 }));
             }
             // now draw each plot
             var x = void 0;
@@ -48997,7 +49011,7 @@ var Graph = /** @class */ (function (_super) {
                 } // Just 3 digits
                 var temp = this.plot_z(z_1) + 0.5; // keep lines crisp!
                 // tick mark
-                zGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin + pwidth - tick_length_half, temp, this.left_margin + pwidth + tick_delta, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(z_1, 2), x: this.left_margin + pwidth + tick_length + 2, y: temp }));
+                zGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin + pwidth - tick_length_half, temp, this.left_margin + pwidth + tick_delta, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(z_1, 2), x: this.left_margin + pwidth + tick_length + 2 - 7, y: temp - 7 }));
             }
             var z = void 0;
             var nz = void 0;
@@ -49095,7 +49109,6 @@ var GraphOver = /** @class */ (function (_super) {
     }
     GraphOver.prototype.render = function () {
         var graph = this.props.graph;
-        // console.log(graph);
         var plotCursor = [];
         // do something useful when user mouses over graph
         // canvas.addEventListener("mousemove", graph_mouse_move, false)
@@ -49114,7 +49127,7 @@ var GraphOver = /** @class */ (function (_super) {
         plotCursor.push(React.createElement(react_konva_1.Line, { points: [x, graph.top_margin, x, end_y], dash: const_1.cursor_pattern, strokeWidth: 1, stroke: const_2.DEFAULT_STROKE }));
         // add x label at bottom of marker
         var graph_x = cursor_x / graph.x_scale + graph.x_min;
-        plotCursor.push(React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(graph_x, 3, false), x: x, y: end_y }));
+        plotCursor.push(React.createElement(react_konva_1.Rect, { x: x - 20, y: end_y, width: 40, height: 10, fill: "white", opacity: 0.8 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(graph_x, 3, false), x: x - 15, y: end_y }));
         // compute which points marker is between
         var x_values = graph.x_values;
         var len = x_values.length;
@@ -49178,37 +49191,13 @@ var GraphOver = /** @class */ (function (_super) {
             this.plot_cursor(plotCursor, graph, graph.cursor2_x, 30);
         }
     };
-    // public graph_mouse_move(event) {
-    //     if (!event) {
-    //         event = window.event;
-    //     }
-    //     const g = event.target;
-    //     g.relMouseCoords(event);
-    //     // not sure yet where the 3,-3 offset correction comes from (borders? padding?)
-    //     const gx = g.mouse_x - g.left_margin - 3;
-    //     const gy = g.pheight - (g.mouse_y - g.top_margin) + 3;
-    //     if (gx >= 0 && gx <= g.pwidth && gy >= 0 && gy <= g.pheight) {
-    //         // g.sch.message('button: '+event.button+', which: '+event.which);
-    //         g.cursor1_x = gx;
-    //     } else {
-    //         g.cursor1_x = undefined;
-    //         g.cursor2_x = undefined;
-    //     }
-    //     this.redraw_plot(g);
-    // }
     GraphOver.prototype.onMouseMove = function (e) {
         var graph = this.props.graph;
         var mouse_x = e.evt.offsetX;
         var mouse_y = e.evt.offsetY;
         var gx = mouse_x - graph.left_margin - 3;
         var gy = graph.pheight - (mouse_y - graph.top_margin) + 3;
-        // if (gx >= 0 && gx <= graph.pwidth && gy >= 0 && gy <= graph.pheight) {
-        // g.sch.message('button: '+event.button+', which: '+event.which);
         graph.cursor1_x = mouse_x - graph.left_margin;
-        // } else {
-        //     graph.cursor1_x = undefined;
-        //     graph.cursor2_x = undefined;
-        // }
         this.setState({});
     };
     return GraphOver;
@@ -49310,7 +49299,7 @@ var Inductor = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             l: "1n",
             name: "",
         };
@@ -49473,7 +49462,7 @@ var NFet = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             wl: "2",
             name: "",
         };
@@ -49565,7 +49554,7 @@ var OpAmp = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             A: "30000",
             name: "",
         };
@@ -49655,7 +49644,7 @@ var PFet = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             wl: "2",
             name: "",
         };
@@ -49753,7 +49742,7 @@ var Probe = /** @class */ (function (_super) {
                 items: ["red", "green", "blue", "cyan", "magenta", "yellow", "black"],
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             color: "cyan",
             offset: "0",
         };
@@ -49844,7 +49833,7 @@ var Resistor = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             r: "1",
             name: "",
         };
@@ -50179,7 +50168,7 @@ var SourceI = /** @class */ (function (_super) {
                 },
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             value: "",
             name: "",
             type: "dc(1)",
@@ -50430,7 +50419,7 @@ var SourceV = /** @class */ (function (_super) {
                 },
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             value: "",
             name: "",
             type: "dc(1)",
