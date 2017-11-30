@@ -1496,7 +1496,7 @@ function prepare(lines) {
     // Присвоение Label для компонентов без линии
     lines.forEach(function (line) {
         if (line.component.type !== "w") {
-            prepareAllConection(line, labelIndex++);
+            prepareAllConection(line, labelIndex++, lines);
         }
     });
     // console.log(JSON.stringify(lines, null, "  "));
@@ -1520,10 +1520,19 @@ function prepareClear(lines) {
         });
     });
 }
-function prepareAllConection(line, label) {
+function prepareAllConection(line, label, lines) {
     line.component.getPoints().forEach(function (connection) {
         if (connection.label === undefined) {
             connection.label = label++;
+            lines.forEach(function (line2) {
+                line2.component.getPoints().forEach(function (connection2) {
+                    if (connection2.label === undefined) {
+                        if ((connection.rx + line.x === connection2.rx + line2.x) && (connection.ry + line.y === connection2.ry + line2.y)) {
+                            connection2.label = connection.label;
+                        }
+                    }
+                });
+            });
         }
     });
 }
@@ -23942,6 +23951,7 @@ var App = /** @class */ (function (_super) {
         _this.dc_max_iters = "1000";
         _this.submit_analyses = undefined;
         _this.transient_results = {};
+        _this.cardCounter = 0;
         // state of modifier keys
         _this.ctrlKey = false;
         _this.shiftKey = false;
@@ -23964,11 +23974,14 @@ var App = /** @class */ (function (_super) {
         };
         _this.schematic_key_down = _this.schematic_key_down.bind(_this);
         _this.schematic_key_up = _this.schematic_key_up.bind(_this);
+        _this.onWindowsMouseDown = _this.onWindowsMouseDown.bind(_this);
         return _this;
     }
     App.prototype.componentDidMount = function () {
+        var app = this.refs.app;
         window.addEventListener("keydown", this.schematic_key_down);
         window.addEventListener("keyup", this.schematic_key_up);
+        window.addEventListener("mousedown", this.onWindowsMouseDown);
     };
     App.prototype.componentWillUnmount = function () {
         // window.removeEventListener("keypress", this.onWindowKeyPress);
@@ -23981,7 +23994,7 @@ var App = /** @class */ (function (_super) {
             var ElClass = this.getComponentClass(this.state.newElement.type);
             newElement = React.createElement(ElClass, { x: this.state.newElement.x, y: this.state.newElement.y, scale: this.state.scale });
         }
-        return (React.createElement("div", { className: "noselect" },
+        return (React.createElement("div", { className: "noselect", ref: "app", tabIndex: -1 },
             React.createElement("input", { type: "hidden", ref: "save" }),
             React.createElement("table", { className: "shematic-table" },
                 React.createElement("tbody", null,
@@ -24036,7 +24049,7 @@ var App = /** @class */ (function (_super) {
                         React.createElement("td", null,
                             React.createElement("div", { className: "shematic-app", onMouseMove: this.onMouseMove.bind(this), onMouseDown: this.onMouseDown.bind(this), onMouseUp: this.onMouseUp.bind(this), style: { position: "relative" } },
                                 React.createElement(grid_1.Grid, { width: 800, height: 456, scale: this.state.scale, stroke: this.state.stroke }),
-                                React.createElement(react_konva_1.Stage, { width: 800, height: 456 },
+                                React.createElement(react_konva_1.Stage, { width: 800, height: 456, onClick: this.onWindowsMouseDown },
                                     elements,
                                     this.state.line ?
                                         React.createElement(sline_1.SLine, { x: this.state.line.x + this.state.shiftX, y: this.state.line.y + this.state.shiftY, endX: this.state.line.endX + this.state.shiftX, endY: this.state.line.endY + this.state.shiftY, onConnectorMouseDown: function () { }, scale: this.state.scale, ref: "line" })
@@ -24079,9 +24092,9 @@ var App = /** @class */ (function (_super) {
                                 React.createElement(react_konva_1.Stage, { width: 870, height: 15 },
                                     React.createElement(react_konva_1.Layer, null,
                                         React.createElement(react_konva_1.Text, { width: 870, align: "right", text: this.state.commentDown, fontSize: 14, fontFamily: "Calibri", fill: "black" })))))))),
-            React.createElement("div", null, this.renederCards())));
+            React.createElement("div", { onKeyDown: this.onCardKeyDown.bind(this) }, this.renderCards())));
     };
-    App.prototype.renederCards = function () {
+    App.prototype.renderCards = function () {
         // return this.state.cards!.map((element, index) => {
         //     return <Card />;
         // });
@@ -24090,7 +24103,7 @@ var App = /** @class */ (function (_super) {
     App.prototype.createCard = function (element, e) {
         var _this = this;
         var index = this.state.cards.length;
-        var card = (React.createElement(card_1.Card, { label: "Edit properties " + element.component.constructor.name, component: element.component, x: e.evt.pageX, y: e.evt.pageY, onClose: function () { ArrayRemove(_this.state.cards, index); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); }, onMouseDown: function () { _this.unselectAll(); _this.setState({}); } }));
+        var card = (React.createElement(card_1.Card, { key: this.cardCounter++, label: "Edit properties " + element.component.constructor.name, component: element.component, x: e.evt.pageX, y: e.evt.pageY, onClose: function () { _this.setState({ cards: ArrayRemove(_this.state.cards, _this.state.cards.indexOf(card)) }); }, onFocus: function () { _this.unselectAll(); _this.setState({}); }, onMouseDown: function () { _this.unselectAll(); _this.setState({}); } }));
         this.state.cards.push(card);
         this.setState({});
     };
@@ -24260,7 +24273,10 @@ var App = /** @class */ (function (_super) {
     };
     App.prototype.onMouseUp = function () {
         var _this = this;
-        var state = {};
+        var state = {
+            elements: this.state.elements,
+            scale: this.state.scale,
+        };
         if (this.state.selectRect) {
             var _a = this.state, selectRect = _a.selectRect, scale = _a.scale;
             var y_1 = selectRect.y / scale;
@@ -24277,7 +24293,7 @@ var App = /** @class */ (function (_super) {
                 x_1 = xw_1;
                 xw_1 = temp;
             }
-            this.state.elements.forEach(function (element) {
+            state.elements.forEach(function (element) {
                 var bundle = element.component.bundle;
                 var yb = bundle.y;
                 var yhb = bundle.y + bundle.height;
@@ -24290,11 +24306,11 @@ var App = /** @class */ (function (_super) {
                     element.selected = true;
                 }
             });
-            this.setState({ selectRect: undefined });
+            state.selectRect = undefined;
         }
         else {
             this.changePoint = true;
-            this.setState({ elements: this.lineRedrawOnPoint() });
+            state.elements = this.lineRedrawOnPoint();
         }
         if (this.state.line) {
             if (!(this.state.line.x === this.state.line.endX && this.state.line.y === this.state.line.endY)) {
@@ -24307,7 +24323,7 @@ var App = /** @class */ (function (_super) {
                 var points_1 = [];
                 var index_1;
                 var copyLine_1 = false;
-                this.state.elements.forEach(function (element, indexEl) {
+                state.elements.forEach(function (element, indexEl) {
                     if (element.type === "sline") {
                         var elX1 = element.component.getPoints()[0].rx + element.x;
                         var elY1 = element.component.getPoints()[0].ry + element.y;
@@ -24332,10 +24348,9 @@ var App = /** @class */ (function (_super) {
                         }
                         else {
                             // Удаление линии при обнаружении дубликата
-                            ArrayRemove(_this.state.elements, indexEl);
+                            state.elements = ArrayRemove(state.elements, indexEl);
                             _this.changePoint = true;
                             copyLine_1 = true;
-                            state.elements = _this.state.elements;
                         }
                     }
                 });
@@ -24345,36 +24360,26 @@ var App = /** @class */ (function (_super) {
                         eLine_1.y = points_1[1];
                         eLine_1.endX = points_1[2];
                         eLine_1.endY = points_1[3];
-                        ArrayRemove(this.state.elements, index_1);
+                        state.elements = ArrayRemove(state.elements, index_1);
                     }
                     else {
                         // Рисуем линию                        
-                        this.state.elements.some(function (element, index) {
+                        state.elements.some(function (element, index) {
                             if (_this.checkPointOnLine(element, eLine_1.endX, eLine_1.endY)) {
-                                _this.shareLine(element.x, element.y, element.endX, element.endY, eLine_1.endX, eLine_1.endY).forEach(function (item) { return _this.state.elements.push(item); });
-                                ArrayRemove(_this.state.elements, index);
+                                _this.shareLine(element.x, element.y, element.endX, element.endY, eLine_1.endX, eLine_1.endY).forEach(function (item) { return state.elements.push(item); });
+                                state.elements = ArrayRemove(state.elements, index);
                                 return true;
                             }
                             return false;
                         });
-                        // console.log("....................");
-                        // eLine.component = this.refs.line;
-                        // this.getAllPoints().forEach((point) => {
-                        //     const ok = this.checkPointOnLine(eLine, point.rx + point.props.parent.props.x, point.ry + point.props.parent.props.y);
-                        //     if (ok) {
-                        //         console.log(ok);
-                        //     }
-                        // });
                     }
-                    this.state.elements.push(eLine_1);
+                    state.elements.push(eLine_1);
                     this.changePoint = true;
-                    state.elements = this.state.elements;
                 }
             }
             state.line = undefined;
-            this.setState(state);
-            return;
         }
+        this.setState(state);
     };
     /**
      * Проверяет принадлежит ли точка линиям
@@ -24474,64 +24479,59 @@ var App = /** @class */ (function (_super) {
         }
         return undefined;
     };
-    App.prototype.joinLine = function () {
-        var _this = this;
-        var indexes = [];
-        this.state.elements.forEach(function (element, index1) {
-            if (element.type === "sline") {
-                var elX1_1 = element.component.getPoints()[0].rx + element.x;
-                var elY1_1 = element.component.getPoints()[0].ry + element.y;
-                var elX2_1 = element.component.getPoints()[1].rx + element.x;
-                var elY2_1 = element.component.getPoints()[1].ry + element.y;
-                _this.state.elements.forEach(function (element2, index2) {
-                    var el2X1 = element2.component.getPoints()[0].rx + element2.x;
-                    var el2Y1 = element2.component.getPoints()[0].ry + element2.y;
-                    var el2X2 = element2.component.getPoints()[1].rx + element2.x;
-                    var el2Y2 = element2.component.getPoints()[1].ry + element2.y;
-                    if (elX1_1 === el2X1 && elY1_1 === el2Y1 || elX2_1 === el2X2 && elY2_1 === el2Y2) {
-                        if (_this.checkPointOnLine(element2, elX1_1, elY1_1) && _this.checkPointOnLine(element2, elX2_1, elY2_1)) {
-                            var points_2 = [];
-                            // Получили все точки
-                            element.component.getPoints().forEach(function (point) {
-                                points_2.push(point);
-                            });
-                            element2.component.getPoints().forEach(function (point) {
-                                points_2.push(point);
-                            });
-                            points_2.sort(_this.сomparePoints);
-                            points_2 = points_2.filter(function (point1) {
-                                return !points_2.some(function (point2) {
-                                    if (point1 !== point2) {
-                                        return _this.сomparePoints(point1, point2) === 0;
-                                    }
-                                    return false;
-                                });
-                            });
-                            var eLine = new element_1.Element();
-                            eLine.type = "sline";
-                            eLine.x = points_2[0].x;
-                            eLine.y = points_2[0].y;
-                            eLine.endX = points_2[1].x;
-                            eLine.endY = points_2[1].y;
-                            _this.state.elements.push(eLine);
-                            _this.changePoint = true;
-                            indexes.push(index1, index2);
-                        }
-                    }
-                });
-            }
-        });
-        indexes.sort(function (a, b) {
-            if (a < b) {
-                return 1;
-            }
-            if (a > b) {
-                return -1;
-            }
-            return 0;
-        });
-        indexes.forEach(function (index) { return ArrayRemove(_this.state.elements, index); });
-    };
+    // public joinLine() {
+    //     const indexes: number[] = [];
+    //     this.state.elements!.forEach((element: Element, index1) => {
+    //         if (element.type === "sline") {
+    //             const elX1 = element.component.getPoints()[0].rx + element.x;
+    //             const elY1 = element.component.getPoints()[0].ry + element.y;
+    //             const elX2 = element.component.getPoints()[1].rx + element.x;
+    //             const elY2 = element.component.getPoints()[1].ry + element.y;
+    //             this.state.elements!.forEach((element2: Element, index2) => {
+    //                 const el2X1 = element2.component.getPoints()[0].rx + element2.x;
+    //                 const el2Y1 = element2.component.getPoints()[0].ry + element2.y;
+    //                 const el2X2 = element2.component.getPoints()[1].rx + element2.x;
+    //                 const el2Y2 = element2.component.getPoints()[1].ry + element2.y;
+    //                 if (elX1 === el2X1 && elY1 === el2Y1 || elX2 === el2X2 && elY2 === el2Y2) {
+    //                     if (this.checkPointOnLine(element2, elX1, elY1) && this.checkPointOnLine(element2, elX2, elY2)) {
+    //                         let points: any[] = [];
+    //                         // Получили все точки
+    //                         element.component.getPoints().forEach((point) => {
+    //                             points.push(point);
+    //                         });
+    //                         element2.component.getPoints().forEach((point) => {
+    //                             points.push(point);
+    //                         });
+    //                         points.sort(this.сomparePoints);
+    //                         points = points.filter((point1) => {
+    //                             return !points.some((point2) => {
+    //                                 if (point1 !== point2) {
+    //                                     return this.сomparePoints(point1, point2) === 0;
+    //                                 }
+    //                                 return false;
+    //                             });
+    //                         });
+    //                         const eLine = new Element();
+    //                         eLine.type = "sline";
+    //                         eLine.x = points[0].x;
+    //                         eLine.y = points[0].y;
+    //                         eLine.endX = points[1].x;
+    //                         eLine.endY = points[1].y;
+    //                         this.state.elements!.push(eLine);
+    //                         this.changePoint = true;
+    //                         indexes.push(index1, index2);
+    //                     }
+    //                 }
+    //             });
+    //         }
+    //     });
+    //     indexes.sort((a, b) => {
+    //         if (a < b) { return 1; }
+    //         if (a > b) { return -1; }
+    //         return 0;
+    //     });
+    //     indexes.forEach((index) => ArrayRemove(this.state.elements!, index));
+    // }
     App.prototype.lineRedrawOnPoint = function () {
         var _this = this;
         var listElement = [];
@@ -24545,19 +24545,19 @@ var App = /** @class */ (function (_super) {
                     var x_2 = point.rx + element.x;
                     var y_2 = point.ry + element.y;
                     if (!_this.state.line) {
-                        var elX1_2;
-                        var elY1_2;
-                        var elX2_2;
-                        var elY2_2;
+                        var elX1_1;
+                        var elY1_1;
+                        var elX2_1;
+                        var elY2_1;
                         _this.state.elements.forEach(function (element, index) {
                             if (element.type === "sline") {
-                                elX1_2 = element.component.getPoints()[0].rx + element.x;
-                                elY1_2 = element.component.getPoints()[0].ry + element.y;
-                                elX2_2 = element.component.getPoints()[1].rx + element.x;
-                                elY2_2 = element.component.getPoints()[1].ry + element.y;
+                                elX1_1 = element.component.getPoints()[0].rx + element.x;
+                                elY1_1 = element.component.getPoints()[0].ry + element.y;
+                                elX2_1 = element.component.getPoints()[1].rx + element.x;
+                                elY2_1 = element.component.getPoints()[1].ry + element.y;
                                 if (_this.checkPointOnLine(element, x_2, y_2)) {
                                     indexes.push(index);
-                                    _this.shareLine(elX1_2, elY1_2, elX2_2, elY2_2, x_2, y_2).forEach(function (item) { return listElement.push(item); });
+                                    _this.shareLine(elX1_1, elY1_1, elX2_1, elY2_1, x_2, y_2).forEach(function (item) { return listElement.push(item); });
                                 }
                             }
                         });
@@ -24565,21 +24565,10 @@ var App = /** @class */ (function (_super) {
                 }
             });
         });
-        indexes.sort(function (a, b) {
-            if (a < b) {
-                return 1;
-            }
-            if (a > b) {
-                return -1;
-            }
-            return 0;
-        });
         if (indexes.length) {
-            indexes.forEach(function (index) {
-                ArrayRemove(listElement, index);
-            });
+            listElement = listElement.filter(function (item, index) { return indexes.indexOf(index) === -1; });
         }
-        return (listElement);
+        return listElement;
     };
     // Отсортировка точек
     App.prototype.сomparePoints = function (a, b) {
@@ -24698,6 +24687,9 @@ var App = /** @class */ (function (_super) {
         this.setState({});
     };
     //#region HotKey
+    App.prototype.onWindowsMouseDown = function (event) {
+        this.refs.app.focus();
+    };
     // process keystrokes, consuming those that are meaningful to us
     App.prototype.schematic_key_down = function (event) {
         var code = event.keyCode;
@@ -24781,20 +24773,9 @@ var App = /** @class */ (function (_super) {
                 indexes.push(index);
             }
         });
-        indexes.sort(function (a, b) {
-            if (a < b) {
-                return 1;
-            }
-            if (a > b) {
-                return -1;
-            }
-            return 0;
-        });
-        if (indexes.length !== 0) {
-            indexes.forEach(function (index) { return ArrayRemove(_this.state.elements, index); });
-        }
+        var elements = this.state.elements.filter(function (item, index) { return indexes.indexOf(index) === -1; });
         // update diagram view
-        this.setState({});
+        this.setState({ elements: elements });
     };
     App.prototype.copy = function () {
         var _this = this;
@@ -25038,6 +25019,10 @@ var App = /** @class */ (function (_super) {
         return elements;
     };
     //#endregion
+    App.prototype.onCardKeyDown = function (e) {
+        e.stopPropagation();
+        console.log("onCardKeyDown");
+    };
     App.prototype.onConnectorMouseDown = function (e, layerX, layerY) {
         e.evt.stopPropagation();
         this.unselectAll();
@@ -25062,27 +25047,15 @@ var App = /** @class */ (function (_super) {
         });
     };
     App.prototype.onDeleteElement = function () {
-        var _this = this;
         var indexes = [];
         this.state.elements.forEach(function (element, index) {
             if (element.selected) {
                 indexes.push(index);
             }
         });
-        indexes.sort(function (a, b) {
-            if (a < b) {
-                return 1;
-            }
-            if (a > b) {
-                return -1;
-            }
-            return 0;
-        });
-        indexes.forEach(function (index) {
-            ArrayRemove(_this.state.elements, index);
-        });
+        var elements = this.state.elements.filter(function (item, index) { return indexes.indexOf(index) === -1; });
         this.changePoint = true;
-        this.setState({});
+        this.setState({ elements: elements });
     };
     App.prototype.json = function (elements) {
         var json = [];
@@ -25385,10 +25358,8 @@ var App = /** @class */ (function (_super) {
     return App;
 }(React.Component));
 exports.App = App;
-function ArrayRemove(array, from, to) {
-    var rest = array.slice((to || from) + 1 || array.length);
-    array.length = from < 0 ? array.length + from : from;
-    return array.push.apply(array, rest);
+function ArrayRemove(array, delIndex) {
+    return array.filter(function (item, index) { return index !== delIndex; });
 }
 
 
