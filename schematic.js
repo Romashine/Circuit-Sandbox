@@ -50300,7 +50300,7 @@ var SourceI = /** @class */ (function (_super) {
     SourceI.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.state.name, value: this.state.value, _json_: index },
+            { name: this.state.name, value: this.state.type, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     SourceI.prototype.render = function () {
