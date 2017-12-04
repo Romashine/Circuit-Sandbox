@@ -1362,7 +1362,9 @@ module.exports = ExecutionEnvironment;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var const_1 = __webpack_require__(19);
+var React = __webpack_require__(5);
+var react_konva_1 = __webpack_require__(8);
+var const_1 = __webpack_require__(18);
 function PrepareLineProps(props) {
     return {
         stroke: props.selected ? const_1.DEFAULT_STROKE_SELECTED : props.stroke || const_1.DEFAULT_STROKE,
@@ -1686,6 +1688,70 @@ function ViewLimits(vmin, vmax) {
     return [vmin, vmax, 1.0 / scale];
 }
 exports.ViewLimits = ViewLimits;
+/**
+ * Функция вращения Имени и Номинала у компонента
+ * @param x
+ * @param y
+ * @param rotation
+ */
+function RotateText(x, y, props, type, fet) {
+    var name = {
+        x: x,
+        y: y,
+        align: (type ? "right" : "left"),
+        rotation: (props.rotation ? props.rotation : 0),
+    };
+    if (name.rotation === 90) {
+        if (fet === 1) {
+            name.align = "right";
+            name.x = name.x + (type ? 40 : 0);
+            name.y = name.y + 68;
+        }
+        else if (fet === 2) {
+            name.align = "left";
+            name.x = name.x + (type ? 40 : 0);
+            name.y = name.y + -8;
+        }
+        else {
+            name.x = name.x + (type ? 40 : 0);
+            name.y = name.y + 30;
+            name.align = "center";
+        }
+    }
+    else if (name.rotation === 180) {
+        name.x = name.x + 50;
+        name.y = name.y + 8;
+        name.align = (type ? "left" : "right");
+    }
+    else if (name.rotation === 270) {
+        if (fet === 1) {
+            name.align = "right";
+            name.x = name.x + (type ? 50 : 10);
+            name.y = name.y - 42;
+        }
+        else if (fet === 2) {
+            name.align = "left";
+            name.x = name.x + (type ? 50 : 10);
+            name.y = name.y - 2;
+        }
+        else {
+            name.x = name.x + (type ? 50 : 10);
+            name.y = name.y - 20;
+            name.align = "center";
+        }
+    }
+    else {
+        name.x = x;
+        name.y = y;
+        name.align = (type ? "right" : "left");
+    }
+    return name;
+}
+exports.RotateText = RotateText;
+function CreateText(text, e) {
+    return (React.createElement(react_konva_1.Text, { text: text, x: e.x, y: e.y, fontSize: 10, fill: "black", width: 50, align: e.align, rotation: e.rotation * (-1) }));
+}
+exports.CreateText = CreateText;
 
 
 /***/ }),
@@ -1715,7 +1781,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var helper_1 = __webpack_require__(10);
 var ConnectionPoint = /** @class */ (function (_super) {
     tslib_1.__extends(ConnectionPoint, _super);
@@ -2499,6 +2565,39 @@ module.exports = ReactCurrentOwner;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_STROKE = "blue";
+exports.DEFAULT_STROKE_LINE = "black";
+exports.DEFAULT_STROKE_SELECTED = "green";
+exports.DEFAULT_STROKE_WIDTH = 1;
+exports.DEFAULT_FILL = "red";
+exports.DEFAULT_FONT_FAMILY = "Calibri";
+exports.DEFAULT_FONT_SIZE = 12;
+exports.DEFAULT_SCALE = 2;
+exports.DEFAULT_SCALE_STEP = 0.5;
+exports.DEFAULT_SHIFT_STEP = 96;
+exports.DEFAULT_ROTATE_STEP = 90;
+exports.DEFAULT_GRID_STROKE = "grey";
+exports.DEFAULT_GRID_WIDTH = 0.1;
+exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
+exports.probe_colors_rgb = {
+    red: "rgb(232,77,57)",
+    green: "rgb(31,171,84)",
+    blue: "rgb(35,110,201)",
+    cyan: "rgb(99,217,234)",
+    magenta: "rgb(237,95,166)",
+    yellow: "rgb(244,211,69)",
+    black: "rgb(0,0,0)",
+    xaxis: undefined,
+};
+
+
+/***/ }),
+/* 19 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
 /* WEBPACK VAR INJECTION */(function(process) {/**
  * Copyright (c) 2013-present, Facebook, Inc.
  *
@@ -2768,39 +2867,6 @@ function getPooledWarningPropertyDefinition(propName, getVal) {
   }
 }
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(0)))
-
-/***/ }),
-/* 19 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_STROKE = "blue";
-exports.DEFAULT_STROKE_LINE = "black";
-exports.DEFAULT_STROKE_SELECTED = "green";
-exports.DEFAULT_STROKE_WIDTH = 1;
-exports.DEFAULT_FILL = "red";
-exports.DEFAULT_FONT_FAMILY = "Calibri";
-exports.DEFAULT_FONT_SIZE = 12;
-exports.DEFAULT_SCALE = 2;
-exports.DEFAULT_SCALE_STEP = 0.5;
-exports.DEFAULT_SHIFT_STEP = 96;
-exports.DEFAULT_ROTATE_STEP = 90;
-exports.DEFAULT_GRID_STROKE = "grey";
-exports.DEFAULT_GRID_WIDTH = 0.1;
-exports.DEFAULT_COMMENNT_DOWN_BUTTON_COMPONENT = " :tap to insert";
-exports.probe_colors_rgb = {
-    red: "rgb(232,77,57)",
-    green: "rgb(31,171,84)",
-    blue: "rgb(35,110,201)",
-    cyan: "rgb(99,217,234)",
-    magenta: "rgb(237,95,166)",
-    yellow: "rgb(244,211,69)",
-    black: "rgb(0,0,0)",
-    xaxis: undefined,
-};
-
 
 /***/ }),
 /* 20 */
@@ -4513,7 +4579,7 @@ module.exports = EventPluginHub;
 
 
 
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 var getEventTarget = __webpack_require__(46);
 
@@ -15144,7 +15210,7 @@ module.exports = FallbackCompositionState;
 
 
 
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 /**
  * @interface Event
@@ -15183,7 +15249,7 @@ module.exports = SyntheticCompositionEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 /**
  * @interface Event
@@ -15228,7 +15294,7 @@ var EventPropagators = __webpack_require__(30);
 var ExecutionEnvironment = __webpack_require__(9);
 var ReactDOMComponentTree = __webpack_require__(7);
 var ReactUpdates = __webpack_require__(16);
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 var inputValueTracking = __webpack_require__(78);
 var getEventTarget = __webpack_require__(46);
@@ -22471,7 +22537,7 @@ var EventPropagators = __webpack_require__(30);
 var ExecutionEnvironment = __webpack_require__(9);
 var ReactDOMComponentTree = __webpack_require__(7);
 var ReactInputSelection = __webpack_require__(94);
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 var getActiveElement = __webpack_require__(95);
 var isTextInputElement = __webpack_require__(79);
@@ -22666,7 +22732,7 @@ var EventPropagators = __webpack_require__(30);
 var ReactDOMComponentTree = __webpack_require__(7);
 var SyntheticAnimationEvent = __webpack_require__(178);
 var SyntheticClipboardEvent = __webpack_require__(179);
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 var SyntheticFocusEvent = __webpack_require__(180);
 var SyntheticKeyboardEvent = __webpack_require__(181);
 var SyntheticMouseEvent = __webpack_require__(37);
@@ -22888,7 +22954,7 @@ module.exports = SimpleEventPlugin;
 
 
 
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 /**
  * @interface Event
@@ -22930,7 +22996,7 @@ module.exports = SyntheticAnimationEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 /**
  * @interface Event
@@ -23299,7 +23365,7 @@ module.exports = SyntheticTouchEvent;
 
 
 
-var SyntheticEvent = __webpack_require__(18);
+var SyntheticEvent = __webpack_require__(19);
 
 /**
  * @interface Event
@@ -23912,7 +23978,7 @@ var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var grid_1 = __webpack_require__(204);
 var icon_1 = __webpack_require__(33);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var element_1 = __webpack_require__(11);
 var circuit_1 = __webpack_require__(205);
 var en_US_1 = __webpack_require__(61);
@@ -25038,6 +25104,7 @@ var App = /** @class */ (function (_super) {
         });
     };
     App.prototype.onNewElement = function (type) {
+        this.unselectAll();
         var el = new element_1.Element();
         el.type = type;
         this.setState({
@@ -43935,7 +44002,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var Grid = /** @class */ (function (_super) {
     tslib_1.__extends(Grid, _super);
     function Grid(props) {
@@ -45685,7 +45752,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var helper_1 = __webpack_require__(10);
 var element_1 = __webpack_require__(11);
 var connection_point_1 = __webpack_require__(12);
@@ -45798,7 +45865,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var ButtonComponent = /** @class */ (function (_super) {
     tslib_1.__extends(ButtonComponent, _super);
     function ButtonComponent(props) {
@@ -45882,6 +45949,13 @@ var Capacitor = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(-59, 20, this.props, true)) :
+            null);
+        text.push(this.state.c && !this.props.offText ?
+            helper_1.CreateText(this.state.c + "F", helper_1.RotateText(9, 20, this.props)) :
+            null);
         // console.log("Capacitor:", this.refs.con2);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 22] }, argsLine)),
@@ -45897,16 +45971,7 @@ var Capacitor = /** @class */ (function (_super) {
                             _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale));
                         } }))] :
                 null,
-            this.state.c && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.c + "F", x: 9, y: 20, 
-                    // width={50} align={"center"}
-                    // offsetX={0} offsetY={0}
-                    // rotation={this.props.rotation! * (-1)}
-                    fontSize: 10, fill: "black" }) :
-                null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: -59, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
-                null));
+            text));
     };
     return Capacitor;
 }(React.Component));
@@ -48814,6 +48879,13 @@ var Diode = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.area && !this.props.offText ?
+            helper_1.CreateText(this.state.area, helper_1.RotateText(10, 20, this.props)) :
+            null);
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(-60, 20, this.props, true)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 18] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 18, 8, 18, 0, 30, -8, 18] }, argsLine)),
@@ -48826,12 +48898,7 @@ var Diode = /** @class */ (function (_super) {
                 [React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point1", x: 0, y: 0, ref: "con1", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: 0, y: 48, ref: "con2", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            this.state.area && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.area, x: 10, y: 20, fontSize: 10, fill: "black" }) :
-                null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: -60, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
-                null));
+            text));
     };
     return Diode;
 }(React.Component));
@@ -48849,7 +48916,7 @@ var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
 var const_1 = __webpack_require__(60);
-var const_2 = __webpack_require__(19);
+var const_2 = __webpack_require__(18);
 var helper_1 = __webpack_require__(10);
 var dialog_1 = __webpack_require__(41);
 var Graph = /** @class */ (function (_super) {
@@ -49329,6 +49396,13 @@ var Inductor = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.l && !this.props.offText ?
+            helper_1.CreateText(this.state.l + "H", helper_1.RotateText(8, 20, this.props)) :
+            null);
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(-59, 20, this.props, true)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 14] }, argsLine)),
             React.createElement(react_konva_1.Arc, tslib_1.__assign({ x: 0, y: 18, angle: 220, innerRadius: 4, outerRadius: 4, rotation: 275 }, argsLine)),
@@ -49340,12 +49414,7 @@ var Inductor = /** @class */ (function (_super) {
                 [React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point1", x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: 0, y: 48, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            this.state.l && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.l + "H", x: 8, y: 20, fontSize: 10, fill: "black" }) :
-                null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: -56, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
-                null));
+            text));
     };
     return Inductor;
 }(React.Component));
@@ -49413,6 +49482,10 @@ var Label = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.label && !this.props.offText ?
+            helper_1.CreateText(this.state.label, helper_1.RotateText(-10, 9, this.props)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 8] }, argsLine)),
             React.createElement(react_konva_1.Rect, { x: -3, y: 0, width: 6, height: 8, onMouseDown: this.props.onClick }),
@@ -49421,9 +49494,7 @@ var Label = /** @class */ (function (_super) {
                         _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale));
                     } }))
                 : null,
-            this.state.label && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.label, x: -10, y: 9, width: 20, fontSize: 10, fill: "black", align: "center" }) :
-                null));
+            text));
     };
     return Label;
 }(React.Component));
@@ -49496,6 +49567,15 @@ var NFet = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(!this.props.offText ?
+            this.state.name && !this.props.offText ?
+                [helper_1.CreateText(this.state.name, helper_1.RotateText(2, 12, this.props, undefined, 1)),
+                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 28, this.props, undefined, 2))]
+                :
+                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 20, this.props))
+            :
+                null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 16] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 16, 0, 16] }, argsLine)),
@@ -49510,14 +49590,7 @@ var NFet = /** @class */ (function (_super) {
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: -24, parent: this, y: 24, ref: "con2" }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point3", x: 0, parent: this, y: 48, ref: "con3" }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            !this.props.offText ?
-                this.state.name && !this.props.offText ?
-                    [React.createElement(react_konva_1.Text, { text: this.state.name, x: 2, y: 12, fontSize: 10, fill: "black" }),
-                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 28, fontSize: 10, fill: "black" })]
-                    :
-                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 20, fontSize: 10, fill: "black" })
-                :
-                    null));
+            text));
     };
     return NFet;
 }(React.Component));
@@ -49590,6 +49663,10 @@ var OpAmp = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(24, -8, this.props)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [8, -8, 8, 24, 32, 8, 8, -8] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 8, 0] }, argsLine)),
@@ -49607,9 +49684,7 @@ var OpAmp = /** @class */ (function (_super) {
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point3", x: 48, y: 8, ref: "con3", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point4", x: 24, y: 16, ref: "con4", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: 24, y: -8, fontSize: 10, fill: "black" }) :
-                null));
+            text));
     };
     return OpAmp;
 }(React.Component));
@@ -49682,6 +49757,15 @@ var PFet = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(!this.props.offText ?
+            this.state.name && !this.props.offText ?
+                [helper_1.CreateText(this.state.name, helper_1.RotateText(2, 12, this.props, undefined, 1)),
+                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 28, this.props, undefined, 2))]
+                :
+                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 20, this.props))
+            :
+                null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 16] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [-8, 16, 0, 16] }, argsLine)),
@@ -49697,14 +49781,7 @@ var PFet = /** @class */ (function (_super) {
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: -24, y: 24, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point3", x: 0, y: 48, ref: "con3", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            !this.props.offText ?
-                this.state.name && !this.props.offText ?
-                    [React.createElement(react_konva_1.Text, { text: this.state.name, x: 2, y: 12, fontSize: 10, fill: "black" }),
-                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 28, fontSize: 10, fill: "black" })]
-                    :
-                        React.createElement(react_konva_1.Text, { text: this.state.wl, x: 2, y: 20, fontSize: 10, fill: "black" })
-                :
-                    null));
+            text));
     };
     return PFet;
 }(React.Component));
@@ -49875,6 +49952,13 @@ var Resistor = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(-59, 20, this.props, true)) :
+            null);
+        text.push(this.state.r && !this.props.offText ?
+            helper_1.CreateText(this.state.r + "\u03A9", helper_1.RotateText(8, 20, this.props)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 12] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 12, 4, 14] }, argsLine)),
@@ -49890,12 +49974,7 @@ var Resistor = /** @class */ (function (_super) {
                 [React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point1", x: 0, y: 0, ref: "con1", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: 0, y: 48, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            this.state.r && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.c, x: 8, y: 20, fontSize: 10, fill: "black" }) :
-                null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: -58, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
-                null));
+            text));
     };
     return Resistor;
 }(React.Component));
@@ -49938,7 +50017,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var helper_1 = __webpack_require__(10);
 var element_1 = __webpack_require__(11);
 var connection_point_1 = __webpack_require__(12);
@@ -49995,6 +50074,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
+var const_1 = __webpack_require__(18);
 var helper_1 = __webpack_require__(10);
 var element_1 = __webpack_require__(11);
 var connection_point_1 = __webpack_require__(12);
@@ -50201,6 +50281,22 @@ var SourceI = /** @class */ (function (_super) {
     SourceI.prototype.getPoints = function () {
         return [this.refs.con1, this.refs.con2];
     };
+    SourceI.prototype.DisplayCurrent = function () {
+        var name = this.state.name;
+        var label = "I(" + (name ? name : "_" + this.jsonIndex) + ")";
+        var v = this.props.app.operating_point[label];
+        if (v !== undefined) {
+            // display the element current 
+            var i = helper_1.EngineeringNotation(v, 2) + "A";
+            var result = [
+                React.createElement(react_konva_1.Text, { x: -5, y: 5, text: i, fontSize: 10, fill: "red" }),
+                React.createElement(react_konva_1.Line, { points: [-3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+                React.createElement(react_konva_1.Line, { points: [3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+            ];
+            // delete this.props.app!.operating_point![label];
+            return result;
+        }
+    };
     SourceI.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
@@ -50213,6 +50309,13 @@ var SourceI = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.type && !this.props.offText ?
+            helper_1.CreateText(this.state.type, helper_1.RotateText(16, 20, this.props)) :
+            null);
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(-66, 20, this.props, true)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 12] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 36, 0, 48] }, argsLine)),
@@ -50225,12 +50328,8 @@ var SourceI = /** @class */ (function (_super) {
                 [React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point1", x: 0, y: 0, ref: "con1", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } })),
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: 0, y: 48, ref: "con2", parent: this }, argsLine, { rotation: this.props.rotation, onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
-            this.state.type && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.type, x: 16, y: 20, fontSize: 10, fill: "black" }) :
-                null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: -66, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
-                null));
+            this.props.dc ? this.DisplayCurrent() : null,
+            text));
     };
     return SourceI;
 }(React.Component));
@@ -50247,7 +50346,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = __webpack_require__(3);
 var React = __webpack_require__(5);
 var react_konva_1 = __webpack_require__(8);
-var const_1 = __webpack_require__(19);
+var const_1 = __webpack_require__(18);
 var helper_1 = __webpack_require__(10);
 var element_1 = __webpack_require__(11);
 var connection_point_1 = __webpack_require__(12);
@@ -50487,6 +50586,13 @@ var SourceV = /** @class */ (function (_super) {
         var argsText = helper_1.PrepareTextProps(this.props);
         var argsLine = helper_1.PrepareLineProps(this.props);
         var argsCommon = helper_1.PrepareCommonProps(this.props);
+        var text = [];
+        text.push(this.state.type && !this.props.offText ?
+            helper_1.CreateText(this.state.type, helper_1.RotateText(16, 20, this.props)) :
+            null);
+        text.push(this.state.name && !this.props.offText ?
+            helper_1.CreateText(this.state.name, helper_1.RotateText(-66, 20, this.props, true)) :
+            null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 0, 0, 12] }, argsLine)),
             React.createElement(react_konva_1.Line, tslib_1.__assign({ points: [0, 36, 0, 48] }, argsLine)),
@@ -50500,12 +50606,7 @@ var SourceV = /** @class */ (function (_super) {
                     React.createElement(connection_point_1.ConnectionPoint, tslib_1.__assign({ key: "point2", x: 0, y: 48, ref: "con2", parent: this, rotation: this.props.rotation }, argsLine, { onConnectorMouseDown: function (e, lx, ly) { _this.props.onConnectorMouseDown(e, lx + (argsCommon.x / _this.props.scale), ly + (argsCommon.y / _this.props.scale)); } }))] :
                 null,
             this.props.dc ? this.DisplayCurrent() : null,
-            this.state.type && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.type, x: 16, y: 20, fontSize: 10, fill: "black" }) :
-                null,
-            this.state.name && !this.props.offText ?
-                React.createElement(react_konva_1.Text, { text: this.state.name, x: -66, y: 20, fontSize: 10, fill: "black", width: 50, align: "right" }) :
-                null));
+            text));
     };
     return SourceV;
 }(React.Component));
