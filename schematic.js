@@ -1748,8 +1748,9 @@ function RotateText(x, y, props, type, fet) {
     return name;
 }
 exports.RotateText = RotateText;
+var counter = 0;
 function CreateText(text, e) {
-    return (React.createElement(react_konva_1.Text, { text: text, x: e.x, y: e.y, fontSize: 10, fill: "black", width: 50, align: e.align, rotation: e.rotation * (-1) }));
+    return (React.createElement(react_konva_1.Text, { key: "text" + counter++, text: text, x: e.x, y: e.y, fontSize: 10, fill: "black", width: 50, align: e.align, rotation: e.rotation * (-1) }));
 }
 exports.CreateText = CreateText;
 
@@ -1761,10 +1762,12 @@ exports.CreateText = CreateText;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
+var counter = 0;
 var Element = /** @class */ (function () {
     function Element() {
         this.rotation = 0;
         this.selected = false;
+        this.key = counter++;
     }
     return Element;
 }());
@@ -24248,7 +24251,7 @@ var App = /** @class */ (function (_super) {
         return this.state.elements.map(function (element, index) {
             // let ElClass: React.ComponentClass<any>&IBundlable;
             var ElClass = _this.getComponentClass(element.type);
-            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: index, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this, element), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY, app: _this, dc: _this.state.dc, data: element.data }));
+            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: element.key, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this, element), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY, app: _this, dc: _this.state.dc, data: element.data }));
             // element.component = new elclass.type(elclass.props);
             delete element.data;
             return elclass;
@@ -24982,7 +24985,7 @@ var App = /** @class */ (function (_super) {
                 // this.components = [];
                 // this.connection_points = [];
                 this.load_schematic(imported_netlist);
-                this.zoomall();
+                // this.zoomall();
                 console.log("ckt from localStorage = " + imported_netlist);
             }
         }
@@ -25087,7 +25090,6 @@ var App = /** @class */ (function (_super) {
     //#endregion
     App.prototype.onCardKeyDown = function (e) {
         e.stopPropagation();
-        console.log("onCardKeyDown");
     };
     App.prototype.onConnectorMouseDown = function (e, layerX, layerY) {
         e.evt.stopPropagation();
@@ -46021,6 +46023,7 @@ var Card = /** @class */ (function (_super) {
             }
             else if (prop.type === "case") {
                 var caseKey = /(\w+)/.exec(prop.value)[1];
+                console.log(prop.cases, caseKey);
                 var caseProps = prop.cases[caseKey];
                 var caseValuesReg = /\((.*)\)/.exec(prop.value);
                 var caseValues_1 = [];
@@ -49445,7 +49448,7 @@ var Label = /** @class */ (function (_super) {
                 type: "text",
             },
         };
-        _this.state = {
+        _this.state = props.data || {
             label: "???",
         };
         return _this;
@@ -49524,13 +49527,13 @@ var NFet = /** @class */ (function (_super) {
                 label: "Name",
                 type: "text",
             },
-            wl: {
+            WL: {
                 label: "WL",
                 type: "text",
             },
         };
         _this.state = props.data || {
-            wl: "2",
+            WL: "2",
             name: "",
         };
         return _this;
@@ -49558,7 +49561,7 @@ var NFet = /** @class */ (function (_super) {
     NFet.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.state.name, WL: this.state.wl, _json_: index },
+            { name: this.state.name, WL: this.state.WL, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     NFet.prototype.render = function () {
@@ -49571,9 +49574,9 @@ var NFet = /** @class */ (function (_super) {
         text.push(!this.props.offText ?
             this.state.name && !this.props.offText ?
                 [helper_1.CreateText(this.state.name, helper_1.RotateText(2, 12, this.props, undefined, 1)),
-                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 28, this.props, undefined, 2))]
+                    helper_1.CreateText(this.state.WL, helper_1.RotateText(2, 28, this.props, undefined, 2))]
                 :
-                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 20, this.props))
+                    helper_1.CreateText(this.state.WL, helper_1.RotateText(2, 20, this.props))
             :
                 null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
@@ -49654,7 +49657,7 @@ var OpAmp = /** @class */ (function (_super) {
     OpAmp.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.state.name, A: this.A, _json_: index },
+            { name: this.state.name, A: this.state.A, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     OpAmp.prototype.render = function () {
@@ -49714,13 +49717,13 @@ var PFet = /** @class */ (function (_super) {
                 label: "Name",
                 type: "text",
             },
-            wl: {
+            WL: {
                 label: "WL",
                 type: "text",
             },
         };
         _this.state = props.data || {
-            wl: "2",
+            WL: "2",
             name: "",
         };
         return _this;
@@ -49748,7 +49751,7 @@ var PFet = /** @class */ (function (_super) {
     PFet.prototype.json = function (index) {
         return [this.type,
             [this.props.x, this.props.y, this.props.rotation],
-            { name: this.state.name, WL: this.state.wl, _json_: index },
+            { name: this.state.name, WL: this.state.WL, _json_: index },
             this.getPoints().map(function (con) { return con.label; })];
     };
     PFet.prototype.render = function () {
@@ -49761,9 +49764,9 @@ var PFet = /** @class */ (function (_super) {
         text.push(!this.props.offText ?
             this.state.name && !this.props.offText ?
                 [helper_1.CreateText(this.state.name, helper_1.RotateText(2, 12, this.props, undefined, 1)),
-                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 28, this.props, undefined, 2))]
+                    helper_1.CreateText(this.state.WL, helper_1.RotateText(2, 28, this.props, undefined, 2))]
                 :
-                    helper_1.CreateText(this.state.wl, helper_1.RotateText(2, 20, this.props))
+                    helper_1.CreateText(this.state.WL, helper_1.RotateText(2, 20, this.props))
             :
                 null);
         return (React.createElement(react_konva_1.Layer, tslib_1.__assign({}, argsCommon),
@@ -49807,10 +49810,6 @@ var Probe = /** @class */ (function (_super) {
         var _this = _super.call(this, props) || this;
         _this.type = "s";
         _this.properties = {
-            name: {
-                label: "Name",
-                type: "text",
-            },
             offset: {
                 label: "Offset",
                 type: "text",
@@ -50254,6 +50253,9 @@ var SourceI = /** @class */ (function (_super) {
                 },
             },
         };
+        if (props.data) {
+            props.data.type = props.data.value;
+        }
         _this.state = props.data || {
             value: "",
             name: "",
@@ -50526,6 +50528,9 @@ var SourceV = /** @class */ (function (_super) {
                 },
             },
         };
+        if (props.data) {
+            props.data.type = props.data.value;
+        }
         _this.state = props.data || {
             value: "",
             name: "",
