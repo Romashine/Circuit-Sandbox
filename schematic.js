@@ -20689,7 +20689,7 @@ var App = /** @class */ (function (_super) {
         _this.dc_max_iters = "1000";
         _this.submit_analyses = undefined;
         _this.transient_results = {};
-        _this.cardCounter = 0;
+        _this.key = 0;
         // state of modifier keys
         _this.ctrlKey = false;
         _this.shiftKey = false;
@@ -20799,7 +20799,7 @@ var App = /** @class */ (function (_super) {
                                             null,
                                     newElement,
                                     React.createElement(react_konva_1.Layer, null, this.state.dcLabels ? this.state.dcLabels.map(function (item) {
-                                        return React.createElement(react_konva_1.Text, { text: item.text + "V", x: (item.x - 5 + _this.state.shiftX) * _this.state.scale, y: (item.y - 5 + _this.state.shiftY) * _this.state.scale, fontSize: 10 * _this.state.scale, stroke: "red", fill: "white" });
+                                        return React.createElement(react_konva_1.Text, { key: _this.key++, text: item.text + "V", x: (item.x - 5 + _this.state.shiftX) * _this.state.scale, y: (item.y - 5 + _this.state.shiftY) * _this.state.scale, fontSize: 10 * _this.state.scale, stroke: "red", fill: "white" });
                                     }) : null)))),
                         React.createElement("td", { className: "shematic-menu-right" },
                             React.createElement("div", { className: "shematic-button-component" },
@@ -20844,18 +20844,18 @@ var App = /** @class */ (function (_super) {
         var _this = this;
         var index = this.state.cards.length;
         var component = element.component;
-        var card = (React.createElement(card_1.Card, { key: this.cardCounter++, label: "Edit properties " + component.constructor.name, component: component, x: e.evt.pageX, y: e.evt.pageY, onClose: function () { _this.setState({ cards: ArrayRemove(_this.state.cards, _this.state.cards.indexOf(card)) }); }, onFocus: function () { _this.unselectAll(); _this.setState({}); }, onMouseDown: function () { _this.unselectAll(); _this.setState({}); } }));
+        var card = (React.createElement(card_1.Card, { key: this.key++, label: "Edit properties " + component.constructor.name, component: component, x: e.evt.pageX, y: e.evt.pageY, onClose: function () { _this.setState({ cards: ArrayRemove(_this.state.cards, _this.state.cards.indexOf(card)) }); }, onFocus: function () { _this.unselectAll(); _this.setState({}); }, onMouseDown: function () { _this.unselectAll(); _this.setState({}); } }));
         this.state.cards.push(card);
         this.setState({});
     };
     App.prototype.createCardACInput = function (cb) {
         var _this = this;
-        this.state.cards.push(React.createElement(cardacinput_1.CardACInput, { label: "AC analysis", x: 100, y: 100, ac_fstart: this.ac_fstart, ac_fstop: this.ac_fstop, ac_source_name: this.ac_source_name, onOkClick: cb, onMouseDown: function () { _this.unselectAll(); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
+        this.state.cards.push(React.createElement(cardacinput_1.CardACInput, { key: this.key++, label: "AC analysis", x: 100, y: 100, ac_fstart: this.ac_fstart, ac_fstop: this.ac_fstop, ac_source_name: this.ac_source_name, onOkClick: cb, onMouseDown: function () { _this.unselectAll(); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
         this.setState({});
     };
     App.prototype.createCardInput = function (cb, label, commentValue, value) {
         var _this = this;
-        this.state.cards.push(React.createElement(cardinput_1.CardInput, { label: label, commentValue: commentValue + ": ", x: 100, y: 100, value: value, onOkClick: cb, onMouseDown: function () { _this.unselectAll(); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
+        this.state.cards.push(React.createElement(cardinput_1.CardInput, { key: this.key++, label: label, commentValue: commentValue + ": ", x: 100, y: 100, value: value, onOkClick: cb, onMouseDown: function () { _this.unselectAll(); _this.setState({}); }, onFocus: function () { _this.unselectAll(); _this.setState({}); } }));
         this.setState({});
     };
     //#endregion
@@ -20924,7 +20924,7 @@ var App = /** @class */ (function (_super) {
         return this.state.elements.map(function (element, index) {
             // let ElClass: React.ComponentClass<any>&IBundlable;
             var ElClass = _this.getComponentClass(element.type);
-            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: element.key, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: _this.createCard.bind(_this, element), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY, app: _this, dc: _this.state.dc, data: element.data }));
+            var elclass = (React.createElement(ElClass, { ref: function (el) { element.component = el; }, key: element.key, x: element.x + _this.state.shiftX, y: element.y + _this.state.shiftY, scale: _this.state.scale, rotation: element.rotation, selected: element.selected, onConnectorMouseDown: _this.onConnectorMouseDown.bind(_this), onDblClick: element.type === "sline" || element.type === "ground" ? undefined : _this.createCard.bind(_this, element), startX: element.startX + _this.state.shiftX, startY: element.startY + _this.state.shiftY, endX: element.endX + _this.state.shiftX, endY: element.endY + _this.state.shiftY, app: _this, dc: _this.state.dc, data: element.data }));
             // element.component = new elclass.type(elclass.props);
             delete element.data;
             return elclass;
@@ -22073,7 +22073,7 @@ var App = /** @class */ (function (_super) {
                 z_values.push([color, 0, v]);
             }
             // graph the result and display in a window
-            this.state.cards.push(React.createElement(graph_1.Graph, { label: en_US_1.i18n.AC_Phase, x: 0, y: 0, x_values: x_values, x_legend: en_US_1.i18n.log_Frequency, y_values: z_values, y_legend: en_US_1.i18n.degrees }), React.createElement(graph_1.Graph, { label: en_US_1.i18n.AC_Magnitude, x: 200, y: 0, x_values: x_values, x_legend: en_US_1.i18n.log_Frequency, y_values: y_values, y_legend: "dB" }));
+            this.state.cards.push(React.createElement(graph_1.Graph, { key: this.key++, label: en_US_1.i18n.AC_Phase, x: 0, y: 0, x_values: x_values, x_legend: en_US_1.i18n.log_Frequency, y_values: z_values, y_legend: en_US_1.i18n.degrees }), React.createElement(graph_1.Graph, { key: this.key++, label: en_US_1.i18n.AC_Magnitude, x: 200, y: 0, x_values: x_values, x_legend: en_US_1.i18n.log_Frequency, y_values: y_values, y_legend: "dB" }));
             this.setState({});
             // this.window(i18n.AC_Phase, graph2);
             // this.window(i18n.AC_Magnitude, graph1, 50);
@@ -22167,7 +22167,7 @@ var App = /** @class */ (function (_super) {
                     }
                 }
                 // graph the result and display in a window
-                _this.state.cards.push(React.createElement(graph_1.Graph, { label: en_US_1.i18n.Transient_Analysis, x: 0, y: 0, x_values: x_values, x_legend: x_legend, y_values: v_values, y_legend: en_US_1.i18n.Voltage, z_values: i_values, z_legend: en_US_1.i18n.Current }));
+                _this.state.cards.push(React.createElement(graph_1.Graph, { key: _this.key++, label: en_US_1.i18n.Transient_Analysis, x: 0, y: 0, x_values: x_values, x_legend: x_legend, y_values: v_values, y_legend: en_US_1.i18n.Voltage, z_values: i_values, z_legend: en_US_1.i18n.Current }));
                 _this.setState({});
             }
         }, en_US_1.i18n.Transient_Analysis, en_US_1.i18n.Stop_time_seconds, this.tran_tstop);
@@ -49809,7 +49809,7 @@ var Card = /** @class */ (function (_super) {
                         prop.label,
                         ":"),
                     React.createElement("select", { ref: "prop-" + key, defaultValue: prop.value }, prop.items.map(function (item) {
-                        return React.createElement("option", { value: item }, item);
+                        return React.createElement("option", { key: item, value: item }, item);
                     }))));
                 properties.push(jsxProperty);
             }
@@ -49836,8 +49836,8 @@ var Card = /** @class */ (function (_super) {
                     React.createElement("select", { ref: "prop-" + key, value: caseKey, onChange: function (e) {
                             prop.value = e.currentTarget.value;
                             _this.setState({});
-                        } }, prop.items.map(function (item) {
-                        return React.createElement("option", { value: item }, item);
+                        } }, prop.items.map(function (item, index) {
+                        return React.createElement("option", { key: item, value: item }, item);
                     })),
                     jsxCases));
                 properties.push(jsxProperty);
@@ -52842,7 +52842,9 @@ var dialog_1 = __webpack_require__(16);
 var Graph = /** @class */ (function (_super) {
     tslib_1.__extends(Graph, _super);
     function Graph(props) {
-        return _super.call(this, props, {}) || this;
+        var _this = _super.call(this, props, {}) || this;
+        _this.key = 0;
+        return _this;
     }
     Graph.prototype.renderContent = function () {
         var pwidth = 400; // dimensions of actual plot
@@ -52872,13 +52874,13 @@ var Graph = /** @class */ (function (_super) {
             var temp = this.plot_x(x) + 0.5; // keep lines crisp!
             // grid line
             if (x === this.x_min) {
-                xGrid.push(React.createElement(react_konva_1.Line, { points: [temp, this.top_margin, temp, end], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }));
+                xGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [temp, this.top_margin, temp, end], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }));
             }
             else {
-                xGrid.push(React.createElement(react_konva_1.Line, { points: [temp, this.top_margin, temp, end], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1, dash: const_1.grid_pattern }));
+                xGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [temp, this.top_margin, temp, end], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1, dash: const_1.grid_pattern }));
             }
             // tick mark
-            xGrid.push(React.createElement(react_konva_1.Line, { points: [temp, end, temp, end + tick_length], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(x, 2), x: temp - 3, y: end + tick_length }));
+            xGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [temp, end, temp, end + tick_length], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { key: this.key++, text: helper_1.EngineeringNotation(x, 2), x: temp - 3, y: end + tick_length }));
         }
         //#endregion
         //#region yGrid
@@ -52913,13 +52915,13 @@ var Graph = /** @class */ (function (_super) {
                 var temp = this.plot_y(y_1) + 0.5; // keep lines crisp!
                 // grid line
                 if (y_1 === this.y_min) {
-                    yGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin, temp, this.left_margin + pwidth, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }));
+                    yGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [this.left_margin, temp, this.left_margin + pwidth, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }));
                 }
                 else {
-                    yGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin, temp, this.left_margin + pwidth, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1, dash: const_1.grid_pattern }));
+                    yGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [this.left_margin, temp, this.left_margin + pwidth, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1, dash: const_1.grid_pattern }));
                 }
                 // tick mark
-                yGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin - tick_length, temp, this.left_margin, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(y_1, 2), x: this.left_margin - tick_length - 2 - 7, y: temp - 7 }));
+                yGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [this.left_margin - tick_length, temp, this.left_margin, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { key: this.key++, text: helper_1.EngineeringNotation(y_1, 2), x: this.left_margin - tick_length - 2 - 7, y: temp - 7 }));
             }
             // now draw each plot
             var x = void 0;
@@ -52951,7 +52953,7 @@ var Graph = /** @class */ (function (_super) {
                         pointsy.push(x, y);
                     }
                 }
-                plotGrid.push(React.createElement(react_konva_1.Line, { points: pointsy, stroke: color, strokeWidth: 3, lineCap: "round" }));
+                plotGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: pointsy, stroke: color, strokeWidth: 3, lineCap: "round" }));
             }
         }
         //#endregion
@@ -52987,7 +52989,7 @@ var Graph = /** @class */ (function (_super) {
                 } // Just 3 digits
                 var temp = this.plot_z(z_1) + 0.5; // keep lines crisp!
                 // tick mark
-                zGrid.push(React.createElement(react_konva_1.Line, { points: [this.left_margin + pwidth - tick_length_half, temp, this.left_margin + pwidth + tick_delta, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(z_1, 2), x: this.left_margin + pwidth + tick_length + 2 - 7, y: temp - 7 }));
+                zGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [this.left_margin + pwidth - tick_length_half, temp, this.left_margin + pwidth + tick_delta, temp], stroke: const_2.DEFAULT_GRID_STROKE, strokeWidth: 1 }), React.createElement(react_konva_1.Text, { key: this.key++, text: helper_1.EngineeringNotation(z_1, 2), x: this.left_margin + pwidth + tick_length + 2 - 7, y: temp - 7 }));
             }
             var z = void 0;
             var nz = void 0;
@@ -53018,17 +53020,17 @@ var Graph = /** @class */ (function (_super) {
                         pointsz.push(x, z);
                     }
                 }
-                plotGrid.push(React.createElement(react_konva_1.Line, { points: pointsz, stroke: color, strokeWidth: 3, lineCap: "round" }));
+                plotGrid.push(React.createElement(react_konva_1.Line, { key: this.key++, points: pointsz, stroke: color, strokeWidth: 3, lineCap: "round" }));
             }
         }
         //#endregion
         //#region legends
-        legends.push(React.createElement(react_konva_1.Text, { text: this.props.x_legend, x: this.left_margin + pwidth / 2, y: h - 5 }));
+        legends.push(React.createElement(react_konva_1.Text, { key: this.key++, text: this.props.x_legend, x: this.left_margin + pwidth / 2, y: h - 5 }));
         if (this.props.y_values !== undefined && this.props.y_values.length > 0) {
-            legends.push(React.createElement(react_konva_1.Text, { text: this.props.y_legend, x: 5, y: this.top_margin + pheight / 2, rotation: -90 }));
+            legends.push(React.createElement(react_konva_1.Text, { key: this.key++, text: this.props.y_legend, x: 5, y: this.top_margin + pheight / 2, rotation: -90 }));
         }
         if (this.props.z_values !== undefined && this.props.z_values.length > 0) {
-            legends.push(React.createElement(react_konva_1.Text, { text: this.props.z_legend, x: w - 5, y: this.top_margin + pheight / 2, rotation: -90 }));
+            legends.push(React.createElement(react_konva_1.Text, { key: this.key++, text: this.props.z_legend, x: w - 5, y: this.top_margin + pheight / 2, rotation: -90 }));
         }
         //#endregion
         var graphParam = {
@@ -53080,6 +53082,7 @@ var GraphOver = /** @class */ (function (_super) {
     tslib_1.__extends(GraphOver, _super);
     function GraphOver(props) {
         var _this = _super.call(this, props) || this;
+        _this.key = 0;
         _this.state = {};
         return _this;
     }
@@ -53100,10 +53103,10 @@ var GraphOver = /** @class */ (function (_super) {
         // draw dashed vertical marker that follows mouse
         var x = graph.left_margin + cursor_x;
         var end_y = graph.top_margin + graph.pheight + graph.tick_length;
-        plotCursor.push(React.createElement(react_konva_1.Line, { points: [x, graph.top_margin, x, end_y], dash: const_1.cursor_pattern, strokeWidth: 1, stroke: const_2.DEFAULT_STROKE }));
+        plotCursor.push(React.createElement(react_konva_1.Line, { key: this.key++, points: [x, graph.top_margin, x, end_y], dash: const_1.cursor_pattern, strokeWidth: 1, stroke: const_2.DEFAULT_STROKE }));
         // add x label at bottom of marker
         var graph_x = cursor_x / graph.x_scale + graph.x_min;
-        plotCursor.push(React.createElement(react_konva_1.Rect, { x: x - 20, y: end_y, width: 50, height: 10, fill: "white", opacity: 0.8 }), React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(graph_x, 3, false), x: x - 15, y: end_y }));
+        plotCursor.push(React.createElement(react_konva_1.Rect, { key: this.key++, x: x - 20, y: end_y, width: 50, height: 10, fill: "white", opacity: 0.8 }), React.createElement(react_konva_1.Text, { key: this.key++, text: helper_1.EngineeringNotation(graph_x, 3, false), x: x - 15, y: end_y }));
         // compute which points marker is between
         var x_values = graph.x_values;
         var len = x_values.length;
@@ -53132,7 +53135,7 @@ var GraphOver = /** @class */ (function (_super) {
                         y += (graph_x - x1) * (y2 - y1) / (x2 - x1);
                     }
                     // annotate plot with value of signal at marker
-                    plotCursor.push(React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(y, 3, false), x: tx, y: ty }));
+                    plotCursor.push(React.createElement(react_konva_1.Text, { key: this.key++, text: helper_1.EngineeringNotation(y, 3, false), x: tx, y: ty }));
                     ty += 14;
                 }
             }
@@ -53153,7 +53156,7 @@ var GraphOver = /** @class */ (function (_super) {
                         z += (graph_x - x1) * (z2 - z1) / (x2 - x1);
                     }
                     // annotate plot with value of signal at marker
-                    plotCursor.push(React.createElement(react_konva_1.Text, { text: helper_1.EngineeringNotation(z, 3, false), x: tx_1, y: ty_1 }));
+                    plotCursor.push(React.createElement(react_konva_1.Text, { key: this.key++, text: helper_1.EngineeringNotation(z, 3, false), x: tx_1, y: ty_1 }));
                     ty_1 += 14;
                 }
             }
@@ -54494,9 +54497,9 @@ var SourceV = /** @class */ (function (_super) {
             // display the element current 
             var i = helper_1.EngineeringNotation(v, 2) + "A";
             var result = [
-                React.createElement(react_konva_1.Text, { x: -5, y: 5, text: i, fontSize: 10, fill: "red" }),
-                React.createElement(react_konva_1.Line, { points: [-3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
-                React.createElement(react_konva_1.Line, { points: [3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+                React.createElement(react_konva_1.Text, { key: 1, x: -5, y: 5, text: i, fontSize: 10, fill: "red" }),
+                React.createElement(react_konva_1.Line, { key: 2, points: [-3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
+                React.createElement(react_konva_1.Line, { key: 3, points: [3, 4, 0, 8], stroke: this.props.selected ? const_1.DEFAULT_STROKE_SELECTED : this.props.stroke || const_1.DEFAULT_STROKE, strokeWidth: this.props.strokeWidth || const_1.DEFAULT_STROKE_WIDTH }),
             ];
             // delete this.props.app!.operating_point![label];
             return result;
